@@ -30,23 +30,16 @@ volatile int encoder_count_right = 0;
 */
 /* ====================================================================================  */
 
-//#define TEST_NORMAL			// runs the official main code
-
 #define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 
-
+//#define TEST_FINAL			// runs the official main code used for final.
 //#define TEST_STOP						// literally stops the motors, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_RIGHT 	//manually tests the right motor, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_LEFT		//manually tests the left motor, independent of encoder
-
 //#define TEST_SPIN_CLOCKWISE			// makes motors spin opposite directions to spin robot clockwise, independent of encoder
 //#define TEST_SPIN_COUNTER_CLOCKWISE		// makes motors spin opposite directions to spin robot counter clockwise, independent of encoder
-
 //#define TEST_ENCODER_LEFT			// test the encoder printout values to serial.
-
 //#define TEST_ENCODER_RIGHT	// test the encoder printout values to serial.
-
-
 /* ====================================================================================  */
 /* ====================================================================================  */
 /* ====================================================================================  */
@@ -63,19 +56,26 @@ volatile int encoder_count_right = 0;
 		Set up initialization
 */
 /* ====================================================================================  */
-#ifdef TEST_ENCODER_LEFT //for testing because do while wasn't exactly what I wanted.
+#ifdef TEST_ENCODER_LEFT 			// Used for TEST_ENCODER_LEFT. Do not remove.
 byte flag =1; //just for a test delete later. 
 #endif
-#ifdef TEST_ENCODER_RIGHT
+#ifdef TEST_ENCODER_RIGHT			// Used for TEST_ENCODER_RIGHT. Do not remove.
 byte flag =1; //just for a test delete later. 
 #endif
+/*
+	@name: setup()
+	@brief: runs once. configure GPIO and ISRs for motor control. Set up Serial port for
+		debugging and for possible control in the future. 
+	@input: check the pin defines above
+	@output: check the pin defines above
+	@return: none
 
-
-
+		TODO: add UART polling to the main loop for keyboard or UART input. This will
+			aid in debugging and quicken development time.
+*/
 void setup() { 
   pinMode(V_REF_L, OUTPUT);
   pinMode(V_REF_R, OUTPUT);
-
   
   pinMode(CLOCKWISE_R, OUTPUT);
   pinMode(C_CLOCKWISE_R, OUTPUT);
@@ -88,10 +88,9 @@ void setup() {
   Serial.begin(9600);
   Serial.println("start");
   
-  //register ISR with vector table
+  //register ISR 
   attachInterrupt(0, count_Left, RISING);
   attachInterrupt(1, count_Right, RISING);
-  
 }
 
 
@@ -105,7 +104,7 @@ void setup() {
 
 
 
-#ifdef TEST_NORMAL
+#ifdef TEST_FINAL
 void loop(){
 		encoder_count_left = 0; //reset the count.
 	while(encoder_count_left <  ENCODER_PULSE_PER_SINGLE_ROTATION){
@@ -153,26 +152,37 @@ void loop(){
 =========================================================
 */
 
-//encoder_count_left is global
-//when does is get reset? in here or the user in main?
-//connect to pin 2 on arduino
+/*
+	@name: count_Right
+	@brief: This is an ISR. counts encoder pulses on GPIO 2
+	@input: [hardware] input from encoder
+	@output: none
+	@global: encoder_count_left
+	@return: none
+*/
 void count_Left(){
 	encoder_count_left++;
 }
 
-//encoder_count_right is global
-// connect to pin 3 on arduino
+/*
+	@name: count_Right
+	@brief: This is an ISR. counts encoder pulses on GPIO 3
+	@input: [hardware] input from encoder
+	@output: none
+	@globals: encoder_count_right
+*/
 void count_Right(){
 	encoder_count_right++;
 }
 
 /*
-	This function will rotate the robot clockwise, takes in 2 inputs.
-	Vref_L and Vref_R values. You set the duration under. This might
-	not be the best implementation because of how the robot spins and how we might 
-	want to do a rotation that is partial. 
+	@name: Rotate_Robot_ClockWise360
+	@brief: Rotate robot 360 degrees independent of encoder
+	@inputs: V_REF_L_VALUE, V_REF_R_VALUE between 0 and 255
+	@output: none
+	@return: none
 	
-	this is for the 360 turn.
+	IMPORTANT: independent of encoder.
 */
 void Rotate_Robot_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
@@ -184,6 +194,14 @@ void Rotate_Robot_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	digitalWrite(C_CLOCKWISE_L, HIGH);
 }
 
+/*
+	@name: Rotate_Robot_Counter_ClockWise360
+	@brief: Rotate robot 360 degrees independent of encoder
+	@inputs: V_REF_L_VALUE, V_REF_R_VALUE between 0 and 255
+	@output: none
+	@return: none
+	IMPORTANT: independent of encoder.
+*/
 void Rotate_Robot_Counter_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_R, LOW);
@@ -195,6 +213,15 @@ void Rotate_Robot_Counter_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 }
 
 
+/*
+	@name: void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE)
+	@brief: makes the robot go straight if the input values are equal. 
+	@inputs: V_REF_L_VALUe, V_REF_R_VALUE between 0 and 255
+	@outputs: none
+	
+	Note: it may be the case that the motors require different ref voltages, hence the
+	two inputs. If motor and encoders were identical we could just use 1 value.
+*/
 void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_R, HIGH);
@@ -205,7 +232,13 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	digitalWrite(C_CLOCKWISE_L, LOW);
 }	
 
-
+/*
+	@name: stop()
+	@brief: stops the motors by setting CLOCKWISE_L, CLOCKWISE_R, C_CLOCKWISE_L, C_CLOCKWISE_R to LOW
+	@input: none
+	@output: [hardware] sets the pins low, check #defines at top of file for pinout.
+	@return: none
+*/
 void stop(){
 	//stop
 	digitalWrite(CLOCKWISE_R, LOW);
@@ -215,23 +248,35 @@ void stop(){
 	digitalWrite(C_CLOCKWISE_L, LOW);
 }
 
-DEMO CODE:
-voild loop(){
-	Rotate_Robot_ClockWise360(100, 100);
-	delay(1000);
-	Rotate_Robot_ClockWise360(200, 200);
-	delay(1000);
-	
-	stop();
-	delay(2000);
-	straight(200, 200);
-	delay(2000);
-	stop();
-	delay(2000);
+#ifdef TEST_LAB4_DEMO
+/*
+	@name: loop
+	@brief: This is the demo loop for lab 4. The robot will:
+		1) wait for input from user to start (GPIO: button)
+		2) Wait 1 second
+		3) move forward 2 feet
+		4) 180* clockwise rotation
+		5) move forward 2 feet
+		6) 180 counter clockwise rotation
+	@input: [hardware] GPIO input
+	@output: control the pins for motor movement, check defines above. 
+	@return: none
+*/
+void loop(){
+
 }
+#endif
 
 
 #ifdef TEST_MANUAL_CHANGE_DIRECTIONS_RIGHT
+/*
+	@name: loop()
+	@brief: Tests the direction of the motors. Good as a first test to see which side is defective
+			Does not use encoder!
+	@input: none
+	@output: [hardware] output check pin defines at top of file.
+	@return: none
+*/
 void loop() {
   // TODO: define which direction this set up is: ________________
   	analogWrite(V_REF_R, 229); //set full speed, 90 % duty cycle
@@ -284,19 +329,42 @@ void loop() {
 #endif
 
 #ifdef TEST_SPIN_CLOCKWISE
+/*
+	@name: loop()
+	@brief: Spins the motors so that robot would spin clockwise. Tests the FETS.
+	@input: none
+	@output: [hardware] output check pin defines at top of file.
+	@return: none
+*/
 void loop() {
 	Rotate_Robot_ClockWise360( 200, 200);
 }
 #endif
 
 #ifdef TEST_SPIN_COUNTER_CLOCKWISE
+/*
+	@name: loop()
+	@brief: Tests that the FET are correctly working by making motors spin opposite direction.
+			Does not use encoder!
+	@input: none
+	@output: [hardware] output check pin defines at top of file.
+	@return: none
+*/
 void loop() {
 	Rotate_Robot_Counter_ClockWise360( 200, 200);
 }
 #endif
 
 
-#ifdef TEST_ENCODER_LEFT //possibly broken.
+#ifdef TEST_ENCODER_LEFT
+/*
+	@name: loop()
+	@brief: Tests the inputs and ISR for the left encoder.
+	@input: [hardware] pin 2 for encoder ISR
+	@output: [hardware] output check pin defines at top of file.
+	@global: encoder_count_left
+	@return: none
+*/
 void loop(){
 	
 	if(flag == 1){
@@ -312,6 +380,14 @@ void loop(){
 #endif
 
 #ifdef TEST_ENCODER_RIGHT //encoder works.
+/*
+	@name: loop()
+	@brief: Tests the inputs and ISR for the right encoder.
+	@input: [hardware] pin 3 for encoder ISR
+	@output: [hardware] output check pin defines at top of file.
+	@global: encoder_count_right
+	@return: none
+*/
 void loop(){
 	if(flag == 1){
 		straight(50,50); //make it go
@@ -326,6 +402,14 @@ void loop(){
 #endif
 
 #ifdef TEST_STOP
+/*
+	@name: loop()
+	@brief: Forces the motors to stop.
+	@input: none
+	@output: [hardware] output check pin defines at top of file.
+	@global: none
+	@return: none
+*/
 void loop(){
 	stop();
 }
