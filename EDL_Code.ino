@@ -13,8 +13,9 @@
 
 #define LED				13
 
-#define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi?
-
+#define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
+#define ENCODER_L_COUNT_2_FEET_DISTANCE			2304 //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
+#define ENCODER_L_COUNT_180_TURN		3000 //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
 
@@ -261,9 +262,44 @@ void stop(){
 	@input: [hardware] GPIO input
 	@output: control the pins for motor movement, check defines above. 
 	@return: none
+	@define: ENCODER_L_COUNT_2_FEET_DISTANCE - used to determine distance via encoder
 */
 void loop(){
-
+	byte speed = 100;
+	//TODO: add the input for gpio. / or UART.... :D
+	delay(1000);
+	
+	encoder_count_left = 0;
+	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
+		straight(speed,speed);
+	}
+	stop();
+	
+	encoder_count_left = 0;
+	while(encoder_count_left <  ENCODER_L_COUNT_180_TURN){
+		Rotate_Robot_ClockWise360(speed,speed);
+	}
+	stop();
+	
+	encoder_count_left = 0;
+	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
+		straight(speed,speed);
+	}
+	stop();
+	
+	encoder_count_left = 0;
+	while(encoder_count_left <  ENCODER_L_COUNT_180_TURN){
+		Rotate_Robot_Counter_ClockWise360(speed,speed);
+	}
+	stop();
+	
+	encoder_count_left = 0;
+	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
+		straight(speed,speed);
+	}
+	stop();
+	
+	delay(1000);
 }
 #endif
 
