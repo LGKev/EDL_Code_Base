@@ -14,11 +14,16 @@
 #define LED				13
 
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
-#define ENCODER_L_COUNT_2_FEET_DISTANCE			2304 //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
-#define ENCODER_L_COUNT_180_TURN		3000 //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
+#define ENCODER_L_COUNT_2_FEET_DISTANCE			526 //Experimentally tested
+#define ENCODER_R_COUNT_2_FEET_DISTANCE			628	//Experimentally tested, note they are different
+#define ENCODER_L_COUNT_180_TURN		750 //Experimentally tested, note they are different
+#define ENCODER_R_COUNT_180_TURN		800	//Experimentally tested
+
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
+
+bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
 
 
 /* ====================================================================================  */
@@ -32,11 +37,11 @@ volatile int encoder_count_right = 0;
 */
 /* ====================================================================================  */
 
-//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 
 
 //#define TEST_FINAL			// runs the official main code used for final.
-#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
+//#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
 //#define TEST_STOP						// literally stops the motors, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_RIGHT 	//manually tests the right motor, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_LEFT		//manually tests the left motor, independent of encoder
@@ -269,32 +274,46 @@ void stop(){
 */
 void loop(){
 	byte speed = 100;
+	byte small_delay = 200;
 	//TODO: add the input for gpio. / or UART.... :D
 	delay(1000);
+	
+	if(demo_4_flag == true){
+	encoder_count_left = 0;
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
+		Rotate_Robot_ClockWise360(speed,speed);
+	}
+	stop();
+	delay(small_delay);
+	}
 	
 	encoder_count_left = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
 		straight(speed,speed);
 	}
 	stop();
+	delay(small_delay);
 	
 	encoder_count_left = 0;
 	while(encoder_count_left <  ENCODER_L_COUNT_180_TURN){
 		Rotate_Robot_ClockWise360(speed,speed);
 	}
 	stop();
+	delay(small_delay);
 	
 	encoder_count_left = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
 		straight(speed,speed);
 	}
 	stop();
+	delay(small_delay);
 	
 	encoder_count_left = 0;
 	while(encoder_count_left <  ENCODER_L_COUNT_180_TURN){
 		Rotate_Robot_Counter_ClockWise360(speed,speed);
 	}
 	stop();
+	delay(small_delay);
 	
 	encoder_count_left = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
@@ -303,6 +322,7 @@ void loop(){
 	stop();
 	
 	delay(1000);
+	demo_4_flag = true;
 }
 #endif
 
@@ -317,8 +337,14 @@ void loop(){
 */
 void loop(){
 	straight(100,100);
-	Serial.print("Left encoder count:  ");
-	Serial.println(encoder_count_left);
+	delay(500);
+	stop();
+	Serial.print("Left encoder:  ");
+	Serial.print(encoder_count_left);
+	Serial.print("Right encoder: 	");
+	Serial.println(encoder_count_right);
+	delay(3000);
+
 }
 #endif
 
@@ -388,11 +414,15 @@ void loop() {
 	@brief: Spins the motors so that robot would spin clockwise. Tests the FETS.
 	@input: none
 	@output: [hardware] output check pin defines at top of file.
+			Serial output the encoder counts so we can test if encoder is working and also quickly find values we need. ie 180, 360, 270
 	@return: none
 */
 void loop() {
-	Rotate_Robot_ClockWise360( 200, 200);
-}
+	Rotate_Robot_ClockWise360( 75, 75);
+	Serial.print("Left encoder:  ");
+	Serial.print(encoder_count_left);
+	Serial.print("Right encoder: 	");
+	Serial.println(encoder_count_right);}
 #endif
 
 #ifdef TEST_SPIN_COUNTER_CLOCKWISE
