@@ -16,6 +16,7 @@
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 #define ENCODER_L_COUNT_2_FEET_DISTANCE			2304 //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 #define ENCODER_L_COUNT_180_TURN		3000 //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
+
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
 
@@ -31,9 +32,11 @@ volatile int encoder_count_right = 0;
 */
 /* ====================================================================================  */
 
-#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+
 
 //#define TEST_FINAL			// runs the official main code used for final.
+#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
 //#define TEST_STOP						// literally stops the motors, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_RIGHT 	//manually tests the right motor, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_LEFT		//manually tests the left motor, independent of encoder
@@ -303,6 +306,21 @@ void loop(){
 }
 #endif
 
+#ifdef TEST_STRAIGHT
+/*
+	@name: loop()
+	@brief: simple test to get motors to go straight, reports the encoder values
+	@input: [hardware] encoder pins check pin defines at top of file
+	@output: Serial prints encoder value 
+	@return: none
+	@global: encoder_count_left
+*/
+void loop(){
+	straight(100,100);
+	Serial.print("Left encoder count:  ");
+	Serial.println(encoder_count_left);
+}
+#endif
 
 #ifdef TEST_MANUAL_CHANGE_DIRECTIONS_RIGHT
 /*
