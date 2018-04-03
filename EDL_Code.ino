@@ -228,7 +228,7 @@ void loop(){
 	
 	 case 102: //f 
 	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_90_TURN){
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
@@ -237,7 +237,7 @@ void loop(){
 	
 	case 103: //g
 	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_90_TURN){
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
@@ -246,7 +246,7 @@ void loop(){
 	
 	case 104: //h
 	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_180_TURN){
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
@@ -255,7 +255,7 @@ void loop(){
 	
 	case 105: //i
 	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_180_TURN){
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
