@@ -51,8 +51,12 @@ SOFTWARE.
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 #define ENCODER_L_COUNT_2_FEET_DISTANCE			526 //Experimentally tested
 #define ENCODER_R_COUNT_2_FEET_DISTANCE			628	//Experimentally tested, note they are different
-#define ENCODER_L_COUNT_180_TURN		750 //Experimentally tested, note they are different
-#define ENCODER_R_COUNT_180_TURN		800	//Experimentally tested
+#define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
+#define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
+
+#define ENCODER_L_COUNT_90_TURN		530// Experimentally found
+#define ENCODER_R_COUNT_90_TURN		520// Experimentally found
+
 
 
 volatile int encoder_count_left = 0;
@@ -221,16 +225,53 @@ void loop(){
 		displayFlag = true;
 
     break;
+	
+	 case 102: //f 
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_90_TURN){
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 103: //g
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_90_TURN){
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 104: //h
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_180_TURN){
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 105: //i
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_Left_Manual_reset < ENCODER_L_COUNT_180_TURN){
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	  
+	  
 	  
 	case 115: //s
 	incomingByte = 0; // reset, or else infinite loop.
-	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	delay(750);
 	stop();
 	displayFlag = true;
     break;
 	  
-	case 114: //s
+	case 114: //r
 	incomingByte = 0; // reset, or else infinite loop.
 	encoder_Left_Manual_reset = 0;
 	encoder_Right_Manual_reset = 0;
