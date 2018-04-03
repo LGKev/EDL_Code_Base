@@ -64,7 +64,7 @@ volatile int encoder_Right_Manual_reset = 0;
 volatile byte keyboardSpeed = 75; 
 
 bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
-
+bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 
 /* ====================================================================================  */
 /*
@@ -171,7 +171,7 @@ void setup() {
 					encoder_count_left, but instead of being reset automatically, it won't reset after each command, its a debug tool
 			encoder_Right_Manual_reset (DITO ABOVE).
 */
-#define KEYBOARD_INPUT
+#ifdef KEYBOARD_INPUT
 void loop(){
 	
 	// Collect Keyboard Input
@@ -190,45 +190,72 @@ void loop(){
 	straight(keyboardSpeed,keyboardSpeed); //go straight
 	encoder_Left_Manual_reset = 0;
 	encoder_Right_Manual_reset = 0;
-    Serial.print("Left encoder manual: ");
-	Serial.print(encoder_Left_Manual_reset);
-	Serial.print("     Right encoder manual:  ");
-	Serial.println(encoder_Right_Manual_reset);
 	delay(1000);
+	stop();
+	displayFlag = true;
       break;
 
     case 98: //b
 	incomingByte = 0; // reset, or else infinite loop.
 	
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	encoder_Left_Manual_reset = 0;
-	encoder_Right_Manual_reset = 0;
-	
-    Serial.print("Left encoder manual: ");
-	Serial.print(encoder_Left_Manual_reset);
-	Serial.print("     Right encoder manual:  ");
-	Serial.println(encoder_Right_Manual_reset);
 	delay(1000);
+	stop();
+		displayFlag = true;
       break;
 
     case 99: //c 
 	incomingByte = 0; // reset, or else infinite loop.
 	
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(1000);
+	stop();
+		displayFlag = true;
+      break;
+  
+      case 100: //d 
+	incomingByte = 0; // reset, or else infinite loop.
+	
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(1000);
+	stop();
+		displayFlag = true;
+
+    break;
+	  
+	case 115: //s
+	incomingByte = 0; // reset, or else infinite loop.
+	
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	encoder_Left_Manual_reset = 0;
 	encoder_Right_Manual_reset = 0;
-	
-    Serial.print("Left encoder manual: ");
-	Serial.print(encoder_Left_Manual_reset);
-	Serial.print("     Right encoder manual:  ");
-	Serial.println(encoder_Right_Manual_reset);
 	delay(1000);
-      break;
+	stop();
+	displayFlag = true;
+    break;
+	  
+	case 114: //s
+	incomingByte = 0; // reset, or else infinite loop.
+	encoder_Left_Manual_reset = 0;
+	encoder_Right_Manual_reset = 0;
+	stop();
+	displayFlag = true;
+	break;
+  
   
 	default:
 	incomingByte = 0;
 	break;
 
+ }
+ 
+ if(displayFlag == true){
+    Serial.print("Left encoder manual: ");
+	Serial.print(encoder_Left_Manual_reset);
+	Serial.print("     Right encoder manual:  ");
+	Serial.println(encoder_Right_Manual_reset);
+	delay(500);
+		displayFlag = false;
  }
   
 }
