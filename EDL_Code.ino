@@ -140,6 +140,9 @@ void setup() {
   pinMode(CLOCKWISE_L, OUTPUT);
   pinMode(C_CLOCKWISE_L, OUTPUT);
   
+  pinMode(ENCODER_L, INPUT);
+  pinMode(ENCODER_R, INPUT);
+  
   pinMode(LED, OUTPUT);
   
   Serial.begin(115200); //gotta go fast.
@@ -188,18 +191,15 @@ void loop(){
     case 97: //a
 	incomingByte = 0; // reset, or else infinite loop.
 	straight(keyboardSpeed,keyboardSpeed); //go straight
-	encoder_Left_Manual_reset = 0;
-	encoder_Right_Manual_reset = 0;
-	delay(1000);
+	delay(750);
 	stop();
 	displayFlag = true;
       break;
 
     case 98: //b
 	incomingByte = 0; // reset, or else infinite loop.
-	
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	delay(1000);
+	delay(750);
 	stop();
 		displayFlag = true;
       break;
@@ -208,16 +208,15 @@ void loop(){
 	incomingByte = 0; // reset, or else infinite loop.
 	
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	delay(1000);
+	delay(750);
 	stop();
 		displayFlag = true;
       break;
   
       case 100: //d 
 	incomingByte = 0; // reset, or else infinite loop.
-	
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	delay(1000);
+	delay(750);
 	stop();
 		displayFlag = true;
 
@@ -225,11 +224,8 @@ void loop(){
 	  
 	case 115: //s
 	incomingByte = 0; // reset, or else infinite loop.
-	
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	encoder_Left_Manual_reset = 0;
-	encoder_Right_Manual_reset = 0;
-	delay(1000);
+	delay(750);
 	stop();
 	displayFlag = true;
     break;
