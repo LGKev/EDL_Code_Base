@@ -50,7 +50,8 @@ SOFTWARE.
 
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 #define ENCODER_L_COUNT_2_FEET_DISTANCE			526 //Experimentally tested
-#define ENCODER_R_COUNT_2_FEET_DISTANCE			628	//Experimentally tested, note they are different
+#define ENCODER_L_COUNT_2_FEET_DISTANCE			1052 //Experimentally tested
+#define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
 #define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
 #define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
 
@@ -81,9 +82,9 @@ bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 */
 /* ====================================================================================  */
 
-//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 
-#define KEYBOARD_INPUT				//purely for printf debgging. 
+//#define KEYBOARD_INPUT				//purely for printf debgging. 
 
 
 //#define TEST_FINAL			// runs the official main code used for final.
@@ -464,17 +465,8 @@ void stop(){
 void loop(){
 	byte speed = 100;
 	byte small_delay = 200;
-	//TODO: add the input for gpio. / or UART.... :D
+	do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
 	delay(1000);
-	
-	if(demo_4_flag == true){
-	encoder_count_left = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
-		Rotate_Robot_ClockWise360(speed,speed);
-	}
-	stop();
-	delay(small_delay);
-	}
 	
 	encoder_count_left = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
@@ -502,16 +494,7 @@ void loop(){
 		Rotate_Robot_Counter_ClockWise360(speed,speed);
 	}
 	stop();
-	delay(small_delay);
-	
-	encoder_count_left = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
-		straight(speed,speed);
-	}
-	stop();
-	
-	delay(1000);
-	demo_4_flag = true;
+	delay(10000);  // giving time to flip On Off switch before next loop
 }
 #endif
 
