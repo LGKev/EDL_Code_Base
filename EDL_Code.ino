@@ -49,7 +49,6 @@ SOFTWARE.
 #define LED				13
 
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
-#define ENCODER_L_COUNT_2_FEET_DISTANCE			526 //Experimentally tested
 #define ENCODER_L_COUNT_2_FEET_DISTANCE			1052 //Experimentally tested
 #define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
 #define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
