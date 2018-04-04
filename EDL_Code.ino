@@ -49,8 +49,8 @@ SOFTWARE.
 #define LED				13
 
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
-#define ENCODER_L_COUNT_2_FEET_DISTANCE			526 //Experimentally tested
-#define ENCODER_R_COUNT_2_FEET_DISTANCE			628	//Experimentally tested, note they are different
+#define ENCODER_L_COUNT_2_FEET_DISTANCE			1052 //Experimentally tested
+#define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
 #define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
 #define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
 
@@ -81,9 +81,9 @@ bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 */
 /* ====================================================================================  */
 
-//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 
-#define KEYBOARD_INPUT				//purely for printf debgging. 
+//#define KEYBOARD_INPUT				//purely for printf debgging. 
 
 
 //#define TEST_FINAL			// runs the official main code used for final.
@@ -146,6 +146,8 @@ void setup() {
   
   pinMode(ENCODER_L, INPUT);
   pinMode(ENCODER_R, INPUT);
+  
+  pinMode(ON_OFF_SWITCH, INPUT);
   
   pinMode(LED, OUTPUT);
   
@@ -439,6 +441,14 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 */
 void stop(){
 	//stop
+	// @Kevin 
+	/*
+	This function stops both motors even if both encoders do not reach desired values.
+	Do we want seperate functions to stop each motor seperately so they both reach the desired encoder values,
+	or just modify this function with inputs of Left, Right, Both. Also we could slow one motors voltage to slow how
+	quickly it reaches its encoder value so that they reach them at similar times (a few options are available)
+	*/
+	
 	digitalWrite(CLOCKWISE_R, LOW);
 	digitalWrite(C_CLOCKWISE_R, LOW);
 	
@@ -464,19 +474,18 @@ void stop(){
 void loop(){
 	byte speed = 100;
 	byte small_delay = 200;
-	//TODO: add the input for gpio. / or UART.... :D
+	do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
 	delay(1000);
 	
-	if(demo_4_flag == true){
 	encoder_count_left = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
-		Rotate_Robot_ClockWise360(speed,speed);
-	}
-	stop();
-	delay(small_delay);
-	}
-	
-	encoder_count_left = 0;
+	// @Kevin
+	/*
+	ENCODER_L_COUNT_2_FEET_DISTANCE is smaller than ENCODER_R_COUNT_2_FEET_DISTANCE so while
+	loop stops both motors when left encoder reaches its value first, again a few options to fix depending
+	on how you want the program to function. Changing to right encoder and changing stop function, changing voltage of
+	left or right wheel to get values closer in time, changing to check both encoders values, slow one motor as it nears
+	encoder value to let other encoder catch up. I can code each of these but not sure what you'd prefer.
+	*/
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
 		straight(speed,speed);
 	}
@@ -502,16 +511,7 @@ void loop(){
 		Rotate_Robot_Counter_ClockWise360(speed,speed);
 	}
 	stop();
-	delay(small_delay);
-	
-	encoder_count_left = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
-		straight(speed,speed);
-	}
-	stop();
-	
-	delay(1000);
-	demo_4_flag = true;
+	delay(10000);  // giving time to flip On Off switch before next loop
 }
 #endif
 
