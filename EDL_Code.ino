@@ -1,4 +1,39 @@
+/*
+	Author: Kevin Kuwata
+	Kevinkuwata.come
+	Github: LGKev
+	Created: 3/31/18
+	
+	Last modified: 4/2/18
+	
+	EDL_Code.ino
+	Arduino 1.8.5
+	
+	This is the code used in the Electronics Design Lab (EDL) ECEN2270 at the University of Colorado @ Boulder
+	
+	MIT License
 
+Copyright (c) [2018] [Kevin Kuwata]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
 #define CLOCKWISE_R   	11
 #define C_CLOCKWISE_R 	12
 #define V_REF_R			10
@@ -16,15 +51,24 @@
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 #define ENCODER_L_COUNT_2_FEET_DISTANCE			526 //Experimentally tested
 #define ENCODER_R_COUNT_2_FEET_DISTANCE			628	//Experimentally tested, note they are different
-#define ENCODER_L_COUNT_180_TURN		750 //Experimentally tested, note they are different
-#define ENCODER_R_COUNT_180_TURN		800	//Experimentally tested
+#define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
+#define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
+
+#define ENCODER_L_COUNT_90_TURN		530// Experimentally found
+#define ENCODER_R_COUNT_90_TURN		520// Experimentally found
+
 
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
 
-bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
+volatile int encoder_Left_Manual_reset = 0;
+volatile int encoder_Right_Manual_reset = 0;
 
+volatile byte keyboardSpeed = 75; 
+
+bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
+bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 
 /* ====================================================================================  */
 /*
@@ -37,7 +81,9 @@ bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infi
 */
 /* ====================================================================================  */
 
-#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+
+#define KEYBOARD_INPUT				//purely for printf debgging. 
 
 
 //#define TEST_FINAL			// runs the official main code used for final.
@@ -65,6 +111,12 @@ bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infi
 		Set up initialization
 */
 /* ====================================================================================  */
+#ifdef KEYBOARD_INPUT
+int incomingByte = 0;   // for incoming serial data
+volatile int LATEST_ADDRESS = 0x18;     //global so address can be changed by user.
+byte x = 0;
+#endif
+
 #ifdef TEST_ENCODER_LEFT 			// Used for TEST_ENCODER_LEFT. Do not remove.
 byte flag =1; //just for a test delete later. 
 #endif
@@ -92,14 +144,19 @@ void setup() {
   pinMode(CLOCKWISE_L, OUTPUT);
   pinMode(C_CLOCKWISE_L, OUTPUT);
   
+  pinMode(ENCODER_L, INPUT);
+  pinMode(ENCODER_R, INPUT);
+  
   pinMode(LED, OUTPUT);
   
-  Serial.begin(9600);
+  Serial.begin(115200); //gotta go fast.
   Serial.println("start");
   
   //register ISR 
   attachInterrupt(0, count_Left, RISING);
   attachInterrupt(1, count_Right, RISING);
+ 
+  
 }
 
 
@@ -109,7 +166,137 @@ void setup() {
 */
 /* ====================================================================================  */
 
+/*
+	@name: void loop()
+	@brief: Function will allow for user input from the computer and perform different functions. 
+			Excessive use of serial print lines for debugging. This should b ea good way to get 
+			data from the encoders and setting speed on the fly. 
+	@input: [hardware] keyboard
+	@output: serial prints
+	@global: incomingByte used for taking into serial data, used in SWITCH STATEMENT  statement. 
+			encoder_Left_Manual_reset is used to read out the value from the encoder it should follow the
+					encoder_count_left, but instead of being reset automatically, it won't reset after each command, its a debug tool
+			encoder_Right_Manual_reset (DITO ABOVE).
+*/
+#ifdef KEYBOARD_INPUT
+void loop(){
+	
+	// Collect Keyboard Input
+	if (Serial.available() > 0) {
+    // read the incoming byte:
+    incomingByte = Serial.read();
 
+    // say what you got:
+    Serial.print("I received: ");
+    Serial.println(incomingByte, DEC);
+  }
+  
+  switch (incomingByte) {
+    case 97: //a
+	incomingByte = 0; // reset, or else infinite loop.
+	straight(keyboardSpeed,keyboardSpeed); //go straight
+	delay(750);
+	stop();
+	displayFlag = true;
+      break;
+
+    case 98: //b
+	incomingByte = 0; // reset, or else infinite loop.
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(750);
+	stop();
+		displayFlag = true;
+      break;
+
+    case 99: //c 
+	incomingByte = 0; // reset, or else infinite loop.
+	
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(750);
+	stop();
+		displayFlag = true;
+      break;
+  
+      case 100: //d 
+	incomingByte = 0; // reset, or else infinite loop.
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(750);
+	stop();
+		displayFlag = true;
+
+    break;
+	
+	 case 102: //f 
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 103: //g
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 104: //h
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 105: //i
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	  
+	  
+	  
+	case 115: //s
+	incomingByte = 0; // reset, or else infinite loop.
+	delay(750);
+	stop();
+	displayFlag = true;
+    break;
+	  
+	case 114: //r
+	incomingByte = 0; // reset, or else infinite loop.
+	encoder_Left_Manual_reset = 0;
+	encoder_Right_Manual_reset = 0;
+	stop();
+	displayFlag = true;
+	break;
+  
+  
+	default:
+	incomingByte = 0;
+	break;
+
+ }
+ 
+ if(displayFlag == true){
+    Serial.print("Left encoder manual: ");
+	Serial.print(encoder_Left_Manual_reset);
+	Serial.print("     Right encoder manual:  ");
+	Serial.println(encoder_Right_Manual_reset);
+	delay(500);
+		displayFlag = false;
+ }
+  
+}
+#endif
 
 
 
@@ -171,6 +358,7 @@ void loop(){
 */
 void count_Left(){
 	encoder_count_left++;
+	encoder_Left_Manual_reset++;
 }
 
 /*
@@ -182,6 +370,7 @@ void count_Left(){
 */
 void count_Right(){
 	encoder_count_right++;
+	encoder_Right_Manual_reset++;
 }
 
 /*
