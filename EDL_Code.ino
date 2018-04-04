@@ -147,6 +147,8 @@ void setup() {
   pinMode(ENCODER_L, INPUT);
   pinMode(ENCODER_R, INPUT);
   
+  pinMode(ON_OFF_SWITCH, INPUT);
+  
   pinMode(LED, OUTPUT);
   
   Serial.begin(115200); //gotta go fast.
@@ -439,6 +441,14 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 */
 void stop(){
 	//stop
+	// @Kevin 
+	/*
+	This function stops both motors even if both encoders do not reach desired values.
+	Do we want seperate functions to stop each motor seperately so they both reach the desired encoder values,
+	or just modify this function with inputs of Left, Right, Both. Also we could slow one motors voltage to slow how
+	quickly it reaches its encoder value so that they reach them at similar times (a few options are available)
+	*/
+	
 	digitalWrite(CLOCKWISE_R, LOW);
 	digitalWrite(C_CLOCKWISE_R, LOW);
 	
@@ -468,6 +478,14 @@ void loop(){
 	delay(1000);
 	
 	encoder_count_left = 0;
+	// @Kevin
+	/*
+	ENCODER_L_COUNT_2_FEET_DISTANCE is smaller than ENCODER_R_COUNT_2_FEET_DISTANCE so while
+	loop stops both motors when left encoder reaches its value first, again a few options to fix depending
+	on how you want the program to function. Changing to right encoder and changing stop function, changing voltage of
+	left or right wheel to get values closer in time, changing to check both encoders values, slow one motor as it nears
+	encoder value to let other encoder catch up. I can code each of these but not sure what you'd prefer.
+	*/
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
 		straight(speed,speed);
 	}
