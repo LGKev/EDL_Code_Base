@@ -34,6 +34,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
+
+#include <SoftwareSerial.h>
+
 #define CLOCKWISE_R   	11
 #define C_CLOCKWISE_R 	12
 #define V_REF_R			10
@@ -48,6 +51,9 @@ SOFTWARE.
 
 #define LED				13
 
+#define BLE_TX			5
+#define BLE_RX			4
+
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
 #define ENCODER_L_COUNT_2_FEET_DISTANCE			1052 //Experimentally tested
 #define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
@@ -58,6 +64,7 @@ SOFTWARE.
 #define ENCODER_R_COUNT_90_TURN		520// Experimentally found
 
 
+SoftwareSerial BLE_UART(BLE_RX, BLE_TX); // RX | TX
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
@@ -69,6 +76,8 @@ volatile byte keyboardSpeed = 75;
 
 bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
 bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
+int incomingByte = 0;   // for incoming serial data
+
 
 /* ====================================================================================  */
 /*
@@ -81,8 +90,8 @@ bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 */
 /* ====================================================================================  */
 
-#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
-
+//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+#define TEST_BLE				//BASIC functionality of the BLE UART
 //#define KEYBOARD_INPUT				//purely for printf debgging. 
 
 
@@ -112,7 +121,6 @@ bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 */
 /* ====================================================================================  */
 #ifdef KEYBOARD_INPUT
-int incomingByte = 0;   // for incoming serial data
 volatile int LATEST_ADDRESS = 0x18;     //global so address can be changed by user.
 byte x = 0;
 #endif
@@ -151,14 +159,16 @@ void setup() {
   
   pinMode(LED, OUTPUT);
   
-  Serial.begin(115200); //gotta go fast.
+  Serial.begin(9600); //gotta go fast.
   Serial.println("start");
   
   //register ISR 
   attachInterrupt(0, count_Left, RISING);
   attachInterrupt(1, count_Right, RISING);
- 
   
+  //HC-08 setup
+  BLE_UART.begin(9600);  //Default Baud for comm, it may be different for your Module. 
+  BLE_UART.write("we are live");
 }
 
 
@@ -167,6 +177,149 @@ void setup() {
 		Main Loop
 */
 /* ====================================================================================  */
+
+
+#ifdef TEST_BLE
+	void loop(){
+		
+		  // Feed any data from bluetooth to Terminal.
+
+
+
+if (BLE_UART.available() > 0) {
+    // read the incoming byte:
+    incomingByte = BLE_UART.read();
+
+    // say what you got:
+    Serial.print("I received: ");
+    Serial.println(incomingByte, DEC);
+  
+  switch (incomingByte) {
+    case 'a': //a
+		BLE_UART.write("a:");
+	incomingByte = 0; // reset, or else infinite loop.
+	straight(keyboardSpeed,keyboardSpeed); //go straight
+	delay(750);
+	stop();
+	displayFlag = true;
+      break;
+
+    case 'b': //b
+			BLE_UART.write("b:");
+	incomingByte = 0; // reset, or else infinite loop.
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(750);
+	stop();
+		displayFlag = true;
+      break;
+
+    case 'c': //c 
+	incomingByte = 0; // reset, or else infinite loop.
+	
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+		BLE_UART.write("c:");
+	delay(750);
+	stop();
+		displayFlag = true;
+      break;
+  
+      case 'd': //d 
+	incomingByte = 0; // reset, or else infinite loop.
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+		BLE_UART.write("d:");
+	delay(750);
+	stop();
+		displayFlag = true;
+
+    break;
+	
+	 case 'f': //f 
+	 	BLE_UART.write("f:");
+	incomingByte = 0; // reset, or else infinite loop.
+	
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 'g': //g
+		BLE_UART.write("g:");
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 'h': //h
+		BLE_UART.write("h:");
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	
+	case 105: //i
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+		displayFlag = true;
+    break;
+	  
+	  
+	  
+	case 115: //s
+	incomingByte = 0; // reset, or else infinite loop.
+	delay(750);
+	stop();
+	displayFlag = true;
+    break;
+	  
+	case 114: //r
+	incomingByte = 0; // reset, or else infinite loop.
+	encoder_Left_Manual_reset = 0;
+	encoder_Right_Manual_reset = 0;
+	stop();
+	displayFlag = true;
+	break;
+  
+  
+	default:
+	incomingByte = 0;
+	break;
+
+ }
+ 
+ if(displayFlag == true){
+	BLE_UART.write("Left encoder manual: ");
+		BLE_UART.write(encoder_Left_Manual_reset);
+	BLE_UART.write("Right encoder manual: ");
+	BLE_UART.write(encoder_Right_Manual_reset);
+
+	 
+	 
+    Serial.print("Left encoder manual: ");
+	Serial.print(encoder_Left_Manual_reset);
+	Serial.print("     Right encoder manual:  ");
+	Serial.println(encoder_Right_Manual_reset);
+	delay(500);
+		displayFlag = false;
+ }
+  
+
+
+
+	}
+	}
+#endif
+
 
 /*
 	@name: void loop()
