@@ -1,6 +1,7 @@
 /*
 	Author: Kevin Kuwata
-	Kevinkuwata.come
+		Zach Butler
+	Kevinkuwata.com
 	Github: LGKev
 	Created: 3/31/18
 	
