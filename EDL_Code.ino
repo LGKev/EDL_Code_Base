@@ -302,6 +302,7 @@ if (BLE_UART.available() > 0) {
 		BLE_UART.write(encoder_Left_Manual_reset);
 	BLE_UART.write("Right encoder manual: ");
 	BLE_UART.write(encoder_Right_Manual_reset);
+	//Try ble_uart.print to do numbers in ascii. 
 
 	 
 	 
