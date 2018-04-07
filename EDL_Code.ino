@@ -48,16 +48,14 @@ SOFTWARE.
 
 #define LED				13
 
-#define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
-#define ENCODER_L_COUNT_2_FEET_DISTANCE			1052 //Experimentally tested
-#define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
-#define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
-#define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
+#define ENCODER_PULSE_PER_SINGLE_ROTATION	2304 	// 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
+#define ENCODER_L_COUNT_2_FEET_DISTANCE		2460 	// Experimentally tested
+#define ENCODER_R_COUNT_2_FEET_DISTANCE		2460	// Experimentally tested, note they are different
+#define ENCODER_L_COUNT_180_TURN			750	 	// Experimentally tested, note they are different
+#define ENCODER_R_COUNT_180_TURN			750		// Experimentally tested
 
-#define ENCODER_L_COUNT_90_TURN		530// Experimentally found
-#define ENCODER_R_COUNT_90_TURN		520// Experimentally found
-
-
+#define ENCODER_L_COUNT_90_TURN				380		// Experimentally found
+#define ENCODER_R_COUNT_90_TURN				380		// Experimentally found
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
@@ -67,8 +65,8 @@ volatile int encoder_Right_Manual_reset = 0;
 
 volatile byte keyboardSpeed = 75; 
 
-bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
-bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
+bool demo_4_flag = false; 	// because I want the robot to rotate around. in infinite loop
+bool displayFlag = true; 	// used for printout in the KEYBOARD_INPUT test.
 
 /* ====================================================================================  */
 /*
@@ -83,29 +81,22 @@ bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
 
 #define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 
-//#define KEYBOARD_INPUT				//purely for printf debgging. 
+//#define KEYBOARD_INPUT		//purely for printf debgging. 
 
 
 //#define TEST_FINAL			// runs the official main code used for final.
 //#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
-//#define TEST_STOP						// literally stops the motors, independent of encoder
+//#define TEST_STOP				// literally stops the motors, independent of encoder
 //#define TEST_MANUAL_CHANGE_DIRECTIONS_RIGHT 	//manually tests the right motor, independent of encoder
-//#define TEST_MANUAL_CHANGE_DIRECTIONS_LEFT		//manually tests the left motor, independent of encoder
+//#define TEST_MANUAL_CHANGE_DIRECTIONS_LEFT	//manually tests the left motor, independent of encoder
 //#define TEST_SPIN_CLOCKWISE			// makes motors spin opposite directions to spin robot clockwise, independent of encoder
-//#define TEST_SPIN_COUNTER_CLOCKWISE		// makes motors spin opposite directions to spin robot counter clockwise, independent of encoder
-//#define TEST_ENCODER_LEFT			// test the encoder printout values to serial.
-//#define TEST_ENCODER_RIGHT	// test the encoder printout values to serial.
+//#define TEST_SPIN_COUNTER_CLOCKWISE	// makes motors spin opposite directions to spin robot counter clockwise, independent of encoder
+//#define TEST_ENCODER_LEFT				// test the encoder printout values to serial.
+//#define TEST_ENCODER_RIGHT			// test the encoder printout values to serial.
 /* ====================================================================================  */
 /* ====================================================================================  */
 /* ====================================================================================  */
 /* ====================================================================================  */
-
-
-
-
-
-
-
 /* ====================================================================================  */
 /*
 		Set up initialization
@@ -160,7 +151,6 @@ void setup() {
  
   
 }
-
 
 /* ====================================================================================  */
 /*
@@ -304,37 +294,178 @@ void loop(){
 
 #ifdef TEST_FINAL
 void loop(){
-		encoder_count_left = 0; //reset the count.
-	while(encoder_count_left <  ENCODER_PULSE_PER_SINGLE_ROTATION){
-		Rotate_Robot_ClockWise360(200,200);
-	}
-	encoder_count_left = 0; //reset the count.
+	byte speed = 100;			//@Kevin speed different for each motor, no longer needed
+	byte small_delay = 200;
+	byte V_REF_L_VALUE = 52; 	// experimentally tested value (double value works also but more prone to slipping at startup)
+	byte V_REF_R_VALUE = 50;	// experimentally tested value (double value works also but more prone to slipping at startup)
 	
+	do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
+	
+	delay(1000); // delay before start
+	
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0; 
+	
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 3 feet
+	//@Kevin
+	/*
+		Change encoder to right side to avoid motor with catch
+	*/
+	while(encoder_count_right <  ENCODER_R_COUNT_3_FEET_DISTANCE){		// 3 feet encoder check
+	//@Kevin
+	/*
+		during while loop we can test for line following
+	*/
+		int x = encoder_count_right - encoder_count_left;				// calculate difference
+		Serial.print("differences CCW; ");								// print difference
+		Serial.println(x);
+		delay(20);		
+	}
 	stop();
+	delay(small_delay);
+		
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
 	
-	delay(1000);
-	encoder_count_left = 0; //reset the count.
-	while(encoder_count_left <  ENCODER_PULSE_PER_SINGLE_ROTATION){
-		Rotate_Robot_Counter_ClockWise360(200, 200);
+	Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);	// Rotate CCW
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+    int z = encoder_count_right - encoder_count_left;					
+		Serial.print("difference CCW: ");								
+		Serial.println(z);
+		delay(20);
 	}
-	encoder_count_left = 0; //reset the count.
-	delay(1000);
-	
-	encoder_count_left = 0; //reset the count.
-	while(encoder_count_left <  ENCODER_PULSE_PER_SINGLE_ROTATION){
-		Rotate_Robot_ClockWise360(100,100);
-	}
-	encoder_count_left = 0; //reset the count.
-	
 	stop();
+	delay(small_delay);
+  
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
 	
-	delay(1000);
-	encoder_count_left = 0; //reset the count.
-	while(encoder_count_left <  ENCODER_PULSE_PER_SINGLE_ROTATION){
-		Rotate_Robot_Counter_ClockWise360(100, 100);
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 6 feet
+	while(encoder_count_right < ENCODER_R_COUNT_6_FEET_DISTANCE){		// 6 feet encoder check
+		int z = encoder_count_right - encoder_count_left;			
+		Serial.print("difference CCW: ");							
+		Serial.println(z);
+		delay(20);
 	}
-	encoder_count_left = 0; //reset the count.
-	delay(1000);
+	stop();
+	delay(small_delay);
+
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+
+	Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);			// Rotate CW
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);		
+	}
+	stop();
+ 	delay(small_delay);
+
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 3 feet
+	while(encoder_count_right < ENCODER_R_COUNT_3_FEET_DISTANCE){		// 3 feet encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
+	}
+	stop();
+	delay(small_delay);
+
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);			// rotate CW
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);    
+	}
+	stop();
+ 	delay(small_delay);
+  
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 3 feet
+	while(encoder_count_right < ENCODER_R_COUNT_3_FEET_DISTANCE){		// 3 feet encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
+	}
+	stop();
+	delay(small_delay);
+
+    encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);			// rotate CW
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);    
+	}
+	stop();
+	delay(small_delay);
+  
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 6 feet
+	while(encoder_count_right < ENCODER_R_COUNT_6_FEET_DISTANCE){		// 6 feet encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
+	}
+	stop();
+	delay(small_delay);
+
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);	// rotate CCW
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
+	}
+	stop();
+	delay(small_delay);
+  
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 3 feet
+	while(encoder_count_right < ENCODER_R_COUNT_3_FEET_DISTANCE){		// 3 feet encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
+	}
+	stop();
+	delay(small_delay);
+
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0;
+	
+	Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);	// rotate CCW
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
+	}
+	stop();
+  	delay(10000);  // giving time to flip On Off switch before next loop
 }
 #endif
 
@@ -416,7 +547,7 @@ void Rotate_Robot_Counter_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 /*
 	@name: void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE)
 	@brief: makes the robot go straight if the input values are equal. 
-	@inputs: V_REF_L_VALUe, V_REF_R_VALUE between 0 and 255
+	@inputs: V_REF_L_VALUE, V_REF_R_VALUE between 0 and 255
 	@outputs: none
 	
 	Note: it may be the case that the motors require different ref voltages, hence the
@@ -472,46 +603,66 @@ void stop(){
 	@define: ENCODER_L_COUNT_2_FEET_DISTANCE - used to determine distance via encoder
 */
 void loop(){
-	byte speed = 100;
+	byte speed = 100;			//@Kevin speed different for each motor
 	byte small_delay = 200;
+	byte V_REF_L_VALUE = 52; 	// experimentally tested value (double value works also but more prone to slipping at startup)
+	byte V_REF_R_VALUE = 50;	// experimentally tested value (double value works also but more prone to slipping at startup)
+	
 	do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
-	delay(1000);
 	
-	encoder_count_left = 0;
-	// @Kevin
-	/*
-	ENCODER_L_COUNT_2_FEET_DISTANCE is smaller than ENCODER_R_COUNT_2_FEET_DISTANCE so while
-	loop stops both motors when left encoder reaches its value first, again a few options to fix depending
-	on how you want the program to function. Changing to right encoder and changing stop function, changing voltage of
-	left or right wheel to get values closer in time, changing to check both encoders values, slow one motor as it nears
-	encoder value to let other encoder catch up. I can code each of these but not sure what you'd prefer.
-	*/
-	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
-		straight(speed,speed);
+	delay(1000); // delay before start
+	
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0; 
+	
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 2 feet
+	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){		// 2 feet encoder check
+		int x = encoder_count_right - encoder_count_left;
+		Serial.print("differences CCW; ");
+		Serial.println(x);
+		delay(20);		
 	}
 	stop();
 	delay(small_delay);
-	
+
+    encoder_count_right = 0;	//reset the counts
 	encoder_count_left = 0;
-	while(encoder_count_left <  ENCODER_L_COUNT_180_TURN){
-		Rotate_Robot_ClockWise360(speed,speed);
+	
+	Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);			// rotate CW
+	while(encoder_count_right <  ENCODER_R_COUNT_180_TURN){				// 180 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);    
+	}
+	stop();
+ 	delay(small_delay);
+	
+	encoder_count_right = 0;	//reset the counts
+	encoder_count_left = 0; 
+	
+	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 2 feet
+	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){		// 2 feet encoder check
+		int x = encoder_count_right - encoder_count_left;
+		Serial.print("differences CCW; ");
+		Serial.println(x);
+		delay(20);		
 	}
 	stop();
 	delay(small_delay);
-	
+
+	encoder_count_right = 0;	//reset the counts
 	encoder_count_left = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
-		straight(speed,speed);
+	
+	Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);	// rotate CCW
+	while(encoder_count_right <  ENCODER_R_COUNT_180_TURN){				// 180 degree encoder check
+		int z = encoder_count_right - encoder_count_left;
+		Serial.print("difference CCW: ");
+		Serial.println(z);
+		delay(20);
 	}
 	stop();
-	delay(small_delay);
-	
-	encoder_count_left = 0;
-	while(encoder_count_left <  ENCODER_L_COUNT_180_TURN){
-		Rotate_Robot_Counter_ClockWise360(speed,speed);
-	}
-	stop();
-	delay(10000);  // giving time to flip On Off switch before next loop
+  	delay(10000);  // giving time to flip On Off switch before next loop
 }
 #endif
 
