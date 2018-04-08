@@ -92,9 +92,9 @@ int incomingByte = 0;   // for incoming serial data
 */
 /* ====================================================================================  */
 
-#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 //#define KEYBOARD_INPUT				//purely for printf debgging. 
-//#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. 
+#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. 
 //#define TEST_BLE_UART_ONLY
 //#define TEST_FINAL			// runs the official main code used for final.
 //#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
