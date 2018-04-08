@@ -262,6 +262,8 @@ int number = 0;
 		r = reset
 		
 		space = stop
+		
+		distance is the incremental distance. 
 		*/
 byte byteCountBle =0;
 void loop(){
@@ -288,6 +290,10 @@ void loop(){
     case ' ': //space stop and reset
 	BLE_UART.println("(space) stop and reset speed");
 	incomingByte = 0; // reset, or else infinite loop.
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+	encoder_Right_Manual_reset = 0;
+	encoder_Left_Manual_reset = 0;
 	keyboardSpeed = 100;
 	stop();
 	displayFlag = true;
@@ -296,40 +302,52 @@ void loop(){
     case 'w': 
 	BLE_UART.println("forward");
 	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
+		printBLE_accl_data();
 	straight(keyboardSpeed,keyboardSpeed,1);
-	delay(750);
+		}
 	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
 		displayFlag = true;
       break;
 
     case 's': 
 	incomingByte = 0; // reset, or else infinite loop.
 	BLE_UART.println("backward");
+	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
+				printBLE_accl_data();
 	straight(keyboardSpeed,keyboardSpeed, -1);
-	delay(750);
+		}
 	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
 		displayFlag = true;
       break;
   
       case 'a': 
 	BLE_UART.println("90 left turn");
 	incomingByte = 0; // reset, or else infinite loop.
-	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	BLE_UART.write("d:");
-	delay(750);
-	stop();
-		displayFlag = true;
-
-    break;
-	
-	 case 'd': //f 
-	 BLE_UART.println("90 right turn");
-	incomingByte = 0; // reset, or else infinite loop.
-	
-	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
-	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+  	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+			printBLE_accl_data();
 	}
 	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+	displayFlag = true;
+	break;
+	
+	case 'd': //f 
+	 BLE_UART.println("90 right turn");
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+				printBLE_accl_data();
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
 	displayFlag = true;
     break;
 	
@@ -367,17 +385,23 @@ void loop(){
 	Serial.print(encoder_Left_Manual_reset);
 	Serial.print("     Right encoder manual:  ");
 	Serial.println(encoder_Right_Manual_reset);
-	delay(500);
-		displayFlag = false;
+	displayFlag = false;
  }
    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("  a_y "); BLE_UART.print(ay);  BLE_UART.print("  a_z  "); BLE_UART.println(az);
+  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("\t a_y "); BLE_UART.print(ay);  BLE_UART.print("\t a_z  "); BLE_UART.println(az);
 	delay(200);
 
 
 	}
 #endif
-
+/*
+	Prints accel data to uart. 
+*/
+void printBLE_accl_data(){
+	 ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("\t a_y "); BLE_UART.print(ay);  BLE_UART.print("\t a_z  "); BLE_UART.println(az);
+	delay(200);
+}
 
 /*
 	@name: void loop()
