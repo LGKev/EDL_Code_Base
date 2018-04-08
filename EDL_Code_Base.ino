@@ -115,11 +115,11 @@ int incomingByte = 0;   // for incoming serial data
 */
 /* ====================================================================================  */
 
-#define ACCL_TEST		// get accl data and send to serial monitor not bluetooth, only for testing
+//#define ACCL_TEST		// get accl data and send to serial monitor not bluetooth, only for testing
 
 //#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 //#define KEYBOARD_INPUT				//purely for printf debgging. 
-//#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. give data to bluetooth UART
+#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. give data to bluetooth UART
 //#define TEST_BLE_UART_ONLY
 
 //#define TEST_FINAL			// runs the official main code used for final.
@@ -144,10 +144,12 @@ int incomingByte = 0;   // for incoming serial data
 #ifdef ACCL_TEST
 void loop(){
 	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-		Serial.print(ax); Serial.print("\t");
-        Serial.print(ay); Serial.print("\t");
-        Serial.print(az); Serial.print("\t");
+		Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t"); 
+       Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
+        Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
 		Serial.println();
+		
+		
 		
 		delay(100);
 }
@@ -368,8 +370,9 @@ void loop(){
 	delay(500);
 		displayFlag = false;
  }
-  
-
+   ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("  a_y "); BLE_UART.print(ay);  BLE_UART.print("  a_z  "); BLE_UART.println(az);
+	delay(200);
 
 
 	}
