@@ -16,6 +16,7 @@
 
 Copyright (c) [2018] [Kevin Kuwata]
 
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -35,6 +36,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
+
+// I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class
+// 10/7/2011 by Jeff Rowberg <jeff@rowberg.net>
+// Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
+//
+// Changelog:
+//      2013-05-08 - added multiple output formats
+//                 - added seamless Fastwire support
+//      2011-10-07 - initial release
+
+/* ============================================
+I2Cdev device library code is placed under the MIT license
+Copyright (c) 2011 Jeff Rowberg
+*/
+
+#include "I2Cdev.h" //https://github.com/jrowberg/i2cdevlib
+#include "MPU6050.h" //https://github.com/jrowberg/i2cdevlib
+#include "Wire.h" //accl and line follower and coms between ATTINy84 and 328p
 
 #include <SoftwareSerial.h>
 //#include "EDL_Code_Base.h"
@@ -66,9 +85,11 @@ SOFTWARE.
 #define ENCODER_L_COUNT_90_TURN		530// Experimentally found
 #define ENCODER_R_COUNT_90_TURN		520// Experimentally found
 
-
+/*  Set up globals for Accelerometer and the BLE UART  */
 SoftwareSerial BLE_UART(BLE_RX, BLE_TX); // RX | TX
-
+MPU6050 ACCL;
+int16_t ax, ay, az; //accelerometer globals
+int16_t gx, gy, gz; //need both even if not using them, because of function call that updates values.
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
@@ -94,10 +115,11 @@ int incomingByte = 0;   // for incoming serial data
 */
 /* ====================================================================================  */
 
+#define ACCL_TEST		// get accl data and send to serial monitor not bluetooth, only for testing
 
 //#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 //#define KEYBOARD_INPUT				//purely for printf debgging. 
-#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. 
+//#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. give data to bluetooth UART
 //#define TEST_BLE_UART_ONLY
 
 //#define TEST_FINAL			// runs the official main code used for final.
@@ -118,6 +140,19 @@ int incomingByte = 0;   // for incoming serial data
 		Set up initialization
 */
 /* ====================================================================================  */
+
+#ifdef ACCL_TEST
+void loop(){
+	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+		Serial.print(ax); Serial.print("\t");
+        Serial.print(ay); Serial.print("\t");
+        Serial.print(az); Serial.print("\t");
+		Serial.println();
+		
+		delay(100);
+}
+#endif
+
 #ifdef KEYBOARD_INPUT
 volatile int LATEST_ADDRESS = 0x18;     //global so address can be changed by user.
 byte x = 0;
@@ -167,6 +202,12 @@ void setup() {
   //HC-08 setup
   BLE_UART.begin(9600);  //Default Baud for comm, it may be different for your Module. 
   BLE_UART.write("we are live");
+  
+  
+  //set up the MPU-6050
+     ACCL.initialize();
+	 Serial.println(ACCL.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+
 }
 
 /* ====================================================================================  */
