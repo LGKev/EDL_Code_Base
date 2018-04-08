@@ -37,6 +37,7 @@ SOFTWARE.
 */
 
 #include <SoftwareSerial.h>
+//#include "EDL_Code_Base.h"
 
 #define CLOCKWISE_R   	11
 #define C_CLOCKWISE_R 	12
@@ -52,7 +53,7 @@ SOFTWARE.
 
 #define LED				13
 
-#define BLE_TX			5
+#define BLE_TX			5 //so opposite of the arduino pins so pin 5 (TX of arduio) to the RX pin of the module.
 #define BLE_RX			4
 
 #define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
@@ -92,10 +93,10 @@ int incomingByte = 0;   // for incoming serial data
 /* ====================================================================================  */
 
 //#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
-#define TEST_BLE				//BASIC functionality of the BLE UART
+//#define TEST_BLE				//BASIC functionality of the BLE UART
 //#define KEYBOARD_INPUT				//purely for printf debgging. 
 
-
+#define TEST_BLE_UART_ONLY
 //#define TEST_FINAL			// runs the official main code used for final.
 //#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
 //#define TEST_STOP						// literally stops the motors, independent of encoder
@@ -178,7 +179,35 @@ void setup() {
 		Main Loop
 */
 /* ====================================================================================  */
+#ifdef TEST_BLE_UART_ONLY
 
+int number = 0;
+	void loop(){
+	BLE_UART.println("number: ");
+	BLE_UART.write(number); //purely a number
+	BLE_UART.print("p num: "); //works good for UART serial com, not ascii values (ints)
+	BLE_UART.println(number);
+	
+	if (BLE_UART.available() > 0) {
+    // read the incoming byte:
+    incomingByte = BLE_UART.read();
+
+    // say what you got:
+    Serial.print("I received: ");
+    Serial.println(incomingByte, DEC);
+	
+	if(incomingByte == 'r'){
+		incomingByte = 0;
+		number = 0;
+	}
+
+	}
+	
+	delay(1000);
+	number++;
+	
+	}
+#endif
 
 #ifdef TEST_BLE
 	void loop(){
@@ -303,6 +332,9 @@ if (BLE_UART.available() > 0) {
 		BLE_UART.write(encoder_Left_Manual_reset);
 	BLE_UART.write("Right encoder manual: ");
 	BLE_UART.write(encoder_Right_Manual_reset);
+	
+	BLE_UART.print("test");
+	BLE_UART.print(97);
 	//Try ble_uart.print to do numbers in ascii. 
 
 	 
