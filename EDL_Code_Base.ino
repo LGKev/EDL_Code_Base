@@ -92,11 +92,10 @@ int incomingByte = 0;   // for incoming serial data
 */
 /* ====================================================================================  */
 
-//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
-//#define TEST_BLE				//BASIC functionality of the BLE UART
+#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 //#define KEYBOARD_INPUT				//purely for printf debgging. 
-
-#define TEST_BLE_UART_ONLY
+//#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. 
+//#define TEST_BLE_UART_ONLY
 //#define TEST_FINAL			// runs the official main code used for final.
 //#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
 //#define TEST_STOP						// literally stops the motors, independent of encoder
@@ -209,132 +208,118 @@ int number = 0;
 	}
 #endif
 
-#ifdef TEST_BLE
-	void loop(){
+#ifdef TEST_BLE_ACCL_DATA
+/*
+	Re arrange the keys for the gaiming pattern
+	
+			   'w' 
+		'a'	   's'		'd'
+
+		w = forward
+		a = left turn 90 
+		d = right turn 90
+		s = backward
 		
-		  // Feed any data from bluetooth to Terminal.
-
-
-
-if (BLE_UART.available() > 0) {
-    // read the incoming byte:
+		r = reset
+		
+		space = stop
+		*/
+byte byteCountBle =0;
+void loop(){
+	while (BLE_UART.available() > 0) {
+    // read the incoming byte only first one:
+	if(byteCountBle ==0){
     incomingByte = BLE_UART.read();
-
+	Serial.print("I received:");
+    Serial.print(incomingByte, DEC);
+	// send to ble terminal
+	BLE_UART.print("UART_RX:");
+	BLE_UART.print(incomingByte);
+	}
+	else{
+	BLE_UART.read(); //don't collect
+	}
+	byteCountBle++;
+	}
+	byteCountBle = 0; // reset for next time we get something.
     // say what you got:
-    Serial.print("I received: ");
-    Serial.println(incomingByte, DEC);
+   
   
   switch (incomingByte) {
-    case 'a': //a
-		BLE_UART.write("a:");
+    case ' ': //space stop and reset
+	BLE_UART.println("(space) stop and reset speed");
 	incomingByte = 0; // reset, or else infinite loop.
-	straight(keyboardSpeed,keyboardSpeed); //go straight
-	delay(750);
+	keyboardSpeed = 100;
 	stop();
 	displayFlag = true;
       break;
 
-    case 'b': //b
-			BLE_UART.write("b:");
+    case 'w': 
+	BLE_UART.println("forward");
 	incomingByte = 0; // reset, or else infinite loop.
-	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	straight(keyboardSpeed,keyboardSpeed,1);
 	delay(750);
 	stop();
 		displayFlag = true;
       break;
 
-    case 'c': //c 
+    case 's': 
 	incomingByte = 0; // reset, or else infinite loop.
-	
-	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-		BLE_UART.write("c:");
+	BLE_UART.println("backward");
+	straight(keyboardSpeed,keyboardSpeed, -1);
 	delay(750);
 	stop();
 		displayFlag = true;
       break;
   
-      case 'd': //d 
+      case 'a': 
+	BLE_UART.println("90 left turn");
 	incomingByte = 0; // reset, or else infinite loop.
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-		BLE_UART.write("d:");
+	BLE_UART.write("d:");
 	delay(750);
 	stop();
 		displayFlag = true;
 
     break;
 	
-	 case 'f': //f 
-	 	BLE_UART.write("f:");
+	 case 'd': //f 
+	 BLE_UART.println("90 right turn");
 	incomingByte = 0; // reset, or else infinite loop.
 	
 	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
-		displayFlag = true;
-    break;
-	
-	case 'g': //g
-		BLE_UART.write("g:");
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
-	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
-	stop();
-		displayFlag = true;
-    break;
-	
-	case 'h': //h
-		BLE_UART.write("h:");
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
-	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
-	stop();
-		displayFlag = true;
-    break;
-	
-	case 105: //i
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
-	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
-	stop();
-		displayFlag = true;
-    break;
-	  
-	  
-	  
-	case 115: //s
-	incomingByte = 0; // reset, or else infinite loop.
-	delay(750);
-	stop();
 	displayFlag = true;
     break;
-	  
-	case 114: //r
+	
+	case '+':
+	keyboardSpeed +=10;
+	BLE_UART.print("+ speed: ");
+	BLE_UART.println(keyboardSpeed);
 	incomingByte = 0; // reset, or else infinite loop.
-	encoder_Left_Manual_reset = 0;
-	encoder_Right_Manual_reset = 0;
-	stop();
-	displayFlag = true;
-	break;
-  
+	break;		
+	
+	case '-':
+	keyboardSpeed -=10;
+	BLE_UART.print("+ speed: ");
+	BLE_UART.println(keyboardSpeed);
+	incomingByte = 0; // reset, or else infinite loop.
+	break;		
   
 	default:
-	incomingByte = 0;
+	incomingByte = 0;	
 	break;
 
  }
  
  if(displayFlag == true){
-	BLE_UART.write("Left encoder manual: ");
-		BLE_UART.write(encoder_Left_Manual_reset);
-	BLE_UART.write("Right encoder manual: ");
-	BLE_UART.write(encoder_Right_Manual_reset);
+	BLE_UART.print("Left encoder manual: ");
+	BLE_UART.println(encoder_Left_Manual_reset);
+	BLE_UART.print("Right encoder manual: ");
+	BLE_UART.println(encoder_Right_Manual_reset);
 	
-	BLE_UART.print("test");
-	BLE_UART.print(97);
 	//Try ble_uart.print to do numbers in ascii. 
 
 	 
@@ -350,7 +335,6 @@ if (BLE_UART.available() > 0) {
 
 
 
-	}
 	}
 #endif
 
@@ -383,7 +367,7 @@ void loop(){
   switch (incomingByte) {
     case 97: //a
 	incomingByte = 0; // reset, or else infinite loop.
-	straight(keyboardSpeed,keyboardSpeed); //go straight
+	straight(keyboardSpeed,keyboardSpeed, 1); //go straight
 	delay(750);
 	stop();
 	displayFlag = true;
@@ -601,15 +585,18 @@ void Rotate_Robot_Counter_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 
 
 /*
-	@name: void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE)
+	@name: void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction)
 	@brief: makes the robot go straight if the input values are equal. 
 	@inputs: V_REF_L_VALUe, V_REF_R_VALUE between 0 and 255
+			direction +1 for forward
+					- for backward
 	@outputs: none
 	
 	Note: it may be the case that the motors require different ref voltages, hence the
 	two inputs. If motor and encoders were identical we could just use 1 value.
 */
-void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
+void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction){
+	if(direction == 1){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_R, HIGH);
 	digitalWrite(C_CLOCKWISE_R, LOW);
@@ -617,6 +604,17 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_L, HIGH);
 	digitalWrite(C_CLOCKWISE_L, LOW);
+	}
+	else if(direction == -1){
+	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
+	digitalWrite(CLOCKWISE_R, LOW);
+	digitalWrite(C_CLOCKWISE_R, HIGH);
+	
+	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
+	digitalWrite(CLOCKWISE_L, LOW);
+	digitalWrite(C_CLOCKWISE_L, HIGH);
+	}
+	//should never reach here
 }	
 
 /*
@@ -674,7 +672,7 @@ void loop(){
 	encoder value to let other encoder catch up. I can code each of these but not sure what you'd prefer.
 	*/
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
-		straight(speed,speed);
+		straight(speed,speed, 1);
 	}
 	stop();
 	delay(small_delay);
@@ -688,7 +686,7 @@ void loop(){
 	
 	encoder_count_left = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_2_FEET_DISTANCE){
-		straight(speed,speed);
+		straight(speed,speed,1);
 	}
 	stop();
 	delay(small_delay);
@@ -712,7 +710,7 @@ void loop(){
 	@global: encoder_count_left
 */
 void loop(){
-	straight(100,100);
+	straight(100,100,1);
 	delay(500);
 	stop();
 	Serial.print("Left encoder:  ");
@@ -828,7 +826,7 @@ void loop() {
 void loop(){
 	
 	if(flag == 1){
-		straight(50,50); //make it go
+		straight(50,50,1); //make it go
 		encoder_count_left = 0; //reset the count
 		flag = 0;
 	}
@@ -850,7 +848,7 @@ void loop(){
 */
 void loop(){
 	if(flag == 1){
-		straight(50,50); //make it go
+		straight(50,50,1); //make it go
 		encoder_count_right = 0; //reset the count
 		flag = 0;
 	}
