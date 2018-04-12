@@ -1,6 +1,7 @@
 /*
 	Author: Kevin Kuwata
-	Kevinkuwata.come
+		Zach Butler
+	Kevinkuwata.com
 	Github: LGKev
 	Created: 3/31/18
 	
@@ -14,6 +15,7 @@
 	MIT License
 
 Copyright (c) [2018] [Kevin Kuwata]
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +36,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
+
+// I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class
+// 10/7/2011 by Jeff Rowberg <jeff@rowberg.net>
+// Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
+//
+// Changelog:
+//      2013-05-08 - added multiple output formats
+//                 - added seamless Fastwire support
+//      2011-10-07 - initial release
+
+/* ============================================
+I2Cdev device library code is placed under the MIT license
+Copyright (c) 2011 Jeff Rowberg
+*/
+
+#include "I2Cdev.h" //https://github.com/jrowberg/i2cdevlib
+#include "MPU6050.h" //https://github.com/jrowberg/i2cdevlib
+#include "Wire.h" //accl and line follower and coms between ATTINy84 and 328p
+
+#include <SoftwareSerial.h>
+//#include "EDL_Code_Base.h"
+
 #define CLOCKWISE_R   	11
 #define C_CLOCKWISE_R 	12
 #define V_REF_R			10
@@ -48,14 +72,24 @@ SOFTWARE.
 
 #define LED				13
 
-#define ENCODER_PULSE_PER_SINGLE_ROTATION	2304 	// 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
-#define ENCODER_L_COUNT_2_FEET_DISTANCE		2460 	// Experimentally tested
-#define ENCODER_R_COUNT_2_FEET_DISTANCE		2460	// Experimentally tested, note they are different
-#define ENCODER_L_COUNT_180_TURN			750	 	// Experimentally tested, note they are different
-#define ENCODER_R_COUNT_180_TURN			750		// Experimentally tested
 
-#define ENCODER_L_COUNT_90_TURN				380		// Experimentally found
-#define ENCODER_R_COUNT_90_TURN				380		// Experimentally found
+#define BLE_TX			5 //so opposite of the arduino pins so pin 5 (TX of arduio) to the RX pin of the module.
+#define BLE_RX			4
+
+#define ENCODER_PULSE_PER_SINGLE_ROTATION		2304 // 12*64 // where did 3 come from? pi? //arbitrarily chosen, change. and calculate value, verify and tune experimentally.
+#define ENCODER_L_COUNT_2_FEET_DISTANCE			1052 //Experimentally tested
+#define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
+#define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
+#define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
+
+#define ENCODER_L_COUNT_90_TURN		530// Experimentally found
+#define ENCODER_R_COUNT_90_TURN		520// Experimentally found
+
+/*  Set up globals for Accelerometer and the BLE UART  */
+SoftwareSerial BLE_UART(BLE_RX, BLE_TX); // RX | TX
+MPU6050 ACCL;
+int16_t ax, ay, az; //accelerometer globals
+int16_t gx, gy, gz; //need both even if not using them, because of function call that updates values.
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
@@ -65,8 +99,10 @@ volatile int encoder_Right_Manual_reset = 0;
 
 volatile byte keyboardSpeed = 75; 
 
-bool demo_4_flag = false; 	// because I want the robot to rotate around. in infinite loop
-bool displayFlag = true; 	// used for printout in the KEYBOARD_INPUT test.
+bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
+bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
+int incomingByte = 0;   // for incoming serial data
+
 
 /* ====================================================================================  */
 /*
@@ -79,10 +115,12 @@ bool displayFlag = true; 	// used for printout in the KEYBOARD_INPUT test.
 */
 /* ====================================================================================  */
 
-#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+//#define ACCL_TEST		// get accl data and send to serial monitor not bluetooth, only for testing
 
-//#define KEYBOARD_INPUT		//purely for printf debgging. 
-
+//#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
+//#define KEYBOARD_INPUT				//purely for printf debgging. 
+#define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. give data to bluetooth UART
+//#define TEST_BLE_UART_ONLY
 
 //#define TEST_FINAL			// runs the official main code used for final.
 //#define TEST_STRAIGHT			// make robot go straight and show value in serial monitor.
@@ -102,8 +140,22 @@ bool displayFlag = true; 	// used for printout in the KEYBOARD_INPUT test.
 		Set up initialization
 */
 /* ====================================================================================  */
+
+#ifdef ACCL_TEST
+void loop(){
+	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+		Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t"); 
+       Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
+        Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
+		Serial.println();
+		
+		
+		
+		delay(100);
+}
+#endif
+
 #ifdef KEYBOARD_INPUT
-int incomingByte = 0;   // for incoming serial data
 volatile int LATEST_ADDRESS = 0x18;     //global so address can be changed by user.
 byte x = 0;
 #endif
@@ -142,14 +194,22 @@ void setup() {
   
   pinMode(LED, OUTPUT);
   
-  Serial.begin(115200); //gotta go fast.
+  Serial.begin(9600); //gotta go fast.
   Serial.println("start");
   
   //register ISR 
   attachInterrupt(0, count_Left, RISING);
   attachInterrupt(1, count_Right, RISING);
- 
   
+  //HC-08 setup
+  BLE_UART.begin(9600);  //Default Baud for comm, it may be different for your Module. 
+  BLE_UART.write("we are live");
+  
+  
+  //set up the MPU-6050
+     ACCL.initialize();
+	 Serial.println(ACCL.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+
 }
 
 /* ====================================================================================  */
@@ -157,6 +217,191 @@ void setup() {
 		Main Loop
 */
 /* ====================================================================================  */
+#ifdef TEST_BLE_UART_ONLY
+
+int number = 0;
+	void loop(){
+	BLE_UART.println("number: ");
+	BLE_UART.write(number); //purely a number
+	BLE_UART.print("p num: "); //works good for UART serial com, not ascii values (ints)
+	BLE_UART.println(number);
+	
+	if (BLE_UART.available() > 0) {
+    // read the incoming byte:
+    incomingByte = BLE_UART.read();
+
+    // say what you got:
+    Serial.print("I received: ");
+    Serial.println(incomingByte, DEC);
+	
+	if(incomingByte == 'r'){
+		incomingByte = 0;
+		number = 0;
+	}
+
+	}
+	
+	delay(1000);
+	number++;
+	
+	}
+#endif
+
+#ifdef TEST_BLE_ACCL_DATA
+/*
+	Re arrange the keys for the gaiming pattern
+	
+			   'w' 
+		'a'	   's'		'd'
+
+		w = forward
+		a = left turn 90 
+		d = right turn 90
+		s = backward
+		
+		r = reset
+		
+		space = stop
+		
+		distance is the incremental distance. 
+		*/
+byte byteCountBle =0;
+void loop(){
+	while (BLE_UART.available() > 0) {
+    // read the incoming byte only first one:
+	if(byteCountBle ==0){
+    incomingByte = BLE_UART.read();
+	Serial.print("I received:");
+    Serial.print(incomingByte, DEC);
+	// send to ble terminal
+	BLE_UART.print("UART_RX:");
+	BLE_UART.print(incomingByte);
+	}
+	else{
+	BLE_UART.read(); //don't collect
+	}
+	byteCountBle++;
+	}
+	byteCountBle = 0; // reset for next time we get something.
+    // say what you got:
+   
+  
+  switch (incomingByte) {
+    case ' ': //space stop and reset
+	BLE_UART.println("(space) stop and reset speed");
+	incomingByte = 0; // reset, or else infinite loop.
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+	encoder_Right_Manual_reset = 0;
+	encoder_Left_Manual_reset = 0;
+	keyboardSpeed = 100;
+	stop();
+	displayFlag = true;
+      break;
+
+    case 'w': 
+	BLE_UART.println("forward");
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
+		printBLE_accl_data();
+	straight(keyboardSpeed,keyboardSpeed,1);
+		}
+	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+		displayFlag = true;
+      break;
+
+    case 's': 
+	incomingByte = 0; // reset, or else infinite loop.
+	BLE_UART.println("backward");
+	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
+				printBLE_accl_data();
+	straight(keyboardSpeed,keyboardSpeed, -1);
+		}
+	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+		displayFlag = true;
+      break;
+  
+      case 'a': 
+	BLE_UART.println("90 left turn");
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
+  	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+			printBLE_accl_data();
+	}
+	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+	displayFlag = true;
+	break;
+	
+	case 'd': //f 
+	 BLE_UART.println("90 right turn");
+	incomingByte = 0; // reset, or else infinite loop.
+	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+				printBLE_accl_data();
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
+	stop();
+	encoder_count_right = 0;
+	encoder_count_left = 0;
+	displayFlag = true;
+    break;
+	
+	case '+':
+	keyboardSpeed +=10;
+	BLE_UART.print("+ speed: ");
+	BLE_UART.println(keyboardSpeed);
+	incomingByte = 0; // reset, or else infinite loop.
+	break;		
+	
+	case '-':
+	keyboardSpeed -=10;
+	BLE_UART.print("+ speed: ");
+	BLE_UART.println(keyboardSpeed);
+	incomingByte = 0; // reset, or else infinite loop.
+	break;		
+  
+	default:
+	incomingByte = 0;	
+	break;
+
+ }
+ 
+ if(displayFlag == true){
+	BLE_UART.print("Left encoder manual: ");
+	BLE_UART.println(encoder_Left_Manual_reset);
+	BLE_UART.print("Right encoder manual: ");
+	BLE_UART.println(encoder_Right_Manual_reset);
+	
+	//Try ble_uart.print to do numbers in ascii. 
+
+	 
+	 
+    Serial.print("Left encoder manual: ");
+	Serial.print(encoder_Left_Manual_reset);
+	Serial.print("     Right encoder manual:  ");
+	Serial.println(encoder_Right_Manual_reset);
+	displayFlag = false;
+ }
+   ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("\t a_y "); BLE_UART.print(ay);  BLE_UART.print("\t a_z  "); BLE_UART.println(az);
+	delay(200);
+
+
+	}
+#endif
+/*
+	Prints accel data to uart. 
+*/
+void printBLE_accl_data(){
+	 ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("\t a_y "); BLE_UART.print(ay);  BLE_UART.print("\t a_z  "); BLE_UART.println(az);
+	delay(200);
+}
 
 /*
 	@name: void loop()
@@ -186,7 +431,7 @@ void loop(){
   switch (incomingByte) {
     case 97: //a
 	incomingByte = 0; // reset, or else infinite loop.
-	straight(keyboardSpeed,keyboardSpeed); //go straight
+	straight(keyboardSpeed,keyboardSpeed, 1); //go straight
 	delay(750);
 	stop();
 	displayFlag = true;
@@ -545,15 +790,18 @@ void Rotate_Robot_Counter_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 
 
 /*
-	@name: void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE)
+	@name: void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction)
 	@brief: makes the robot go straight if the input values are equal. 
-	@inputs: V_REF_L_VALUE, V_REF_R_VALUE between 0 and 255
+	@inputs: V_REF_L_VALUe, V_REF_R_VALUE between 0 and 255
+			direction +1 for forward
+					- for backward
 	@outputs: none
 	
 	Note: it may be the case that the motors require different ref voltages, hence the
 	two inputs. If motor and encoders were identical we could just use 1 value.
 */
-void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
+void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction){
+	if(direction == 1){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_R, HIGH);
 	digitalWrite(C_CLOCKWISE_R, LOW);
@@ -561,6 +809,17 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_L, HIGH);
 	digitalWrite(C_CLOCKWISE_L, LOW);
+	}
+	else if(direction == -1){
+	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
+	digitalWrite(CLOCKWISE_R, LOW);
+	digitalWrite(C_CLOCKWISE_R, HIGH);
+	
+	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
+	digitalWrite(CLOCKWISE_L, LOW);
+	digitalWrite(C_CLOCKWISE_L, HIGH);
+	}
+	//should never reach here
 }	
 
 /*
@@ -676,7 +935,7 @@ void loop(){
 	@global: encoder_count_left
 */
 void loop(){
-	straight(100,100);
+	straight(100,100,1);
 	delay(500);
 	stop();
 	Serial.print("Left encoder:  ");
@@ -792,7 +1051,7 @@ void loop() {
 void loop(){
 	
 	if(flag == 1){
-		straight(50,50); //make it go
+		straight(50,50,1); //make it go
 		encoder_count_left = 0; //reset the count
 		flag = 0;
 	}
@@ -814,7 +1073,7 @@ void loop(){
 */
 void loop(){
 	if(flag == 1){
-		straight(50,50); //make it go
+		straight(50,50,1); //make it go
 		encoder_count_right = 0; //reset the count
 		flag = 0;
 	}
