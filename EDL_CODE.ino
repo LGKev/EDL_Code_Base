@@ -54,7 +54,7 @@ Copyright (c) 2011 Jeff Rowberg
 #include "I2Cdev.h" //https://github.com/jrowberg/i2cdevlib
 #include "MPU6050.h" //https://github.com/jrowberg/i2cdevlib
 #include "Wire.h" //accl and line follower and coms between ATTINy84 and 328p
-
+//#include "sensorbar.h"	// line follower library
 #include <SoftwareSerial.h>
 //#include "EDL_Code.h"
 
@@ -85,11 +85,22 @@ Copyright (c) 2011 Jeff Rowberg
 #define ENCODER_L_COUNT_90_TURN		530// Experimentally found
 #define ENCODER_R_COUNT_90_TURN		520// Experimentally found
 
-/*  Set up globals for Accelerometer and the BLE UART  */
-SoftwareSerial BLE_UART(BLE_RX, BLE_TX); // RX | TX
 MPU6050 ACCL;
-int16_t ax, ay, az; //accelerometer globals
+int16_t ax = 4;
+int16_t ay =5;
+int16_t az =7; //accelerometer globals
 int16_t gx, gy, gz; //need both even if not using them, because of function call that updates values.
+
+// // Line follow variables
+// const uint8_t SX1509_ADDRESS = 0x3E;  // SX1509 I2C address (00)
+// unsigned long previous_ms = 0;
+// unsigned long current_ms = 0;
+// long interval = 0;
+// char bot_position;
+// char led_count;
+// uint8_t var;
+
+// SensorBar mySensorBar(SX1509_ADDRESS);
 
 volatile int encoder_count_left = 0;
 volatile int encoder_count_right = 0;
@@ -115,10 +126,13 @@ int incomingByte = 0;   // for incoming serial data
 */
 /* ====================================================================================  */
 
-//#define ACCL_TEST		// get accl data and send to serial monitor not bluetooth, only for testing
 
+//#define LINE_FOLLOW_TEST	// test line following
+
+
+//#define TEST_ACCL		// get accl data and send to serial monitor not bluetooth, only for testing
 //#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
-//#define KEYBOARD_INPUT				//purely for printf debgging. 
+//#define TEST_KEYBOARD_INPUT				//purely for printf debgging. 
 #define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. give data to bluetooth UART
 //#define TEST_BLE_UART_ONLY
 
@@ -141,19 +155,6 @@ int incomingByte = 0;   // for incoming serial data
 */
 /* ====================================================================================  */
 
-#ifdef ACCL_TEST
-void loop(){
-	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-		Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t"); 
-       Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
-        Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
-		Serial.println();
-		
-		
-		
-		delay(100);
-}
-#endif
 
 #ifdef KEYBOARD_INPUT
 volatile int LATEST_ADDRESS = 0x18;     //global so address can be changed by user.
@@ -178,6 +179,9 @@ byte flag =1; //just for a test delete later.
 			aid in debugging and quicken development time.
 */
 void setup() { 
+
+	Wire.begin();
+
   pinMode(V_REF_L, OUTPUT);
   pinMode(V_REF_R, OUTPUT);
   
@@ -202,14 +206,39 @@ void setup() {
   attachInterrupt(1, count_Right, RISING);
   
   //HC-08 setup
-  BLE_UART.begin(9600);  //Default Baud for comm, it may be different for your Module. 
-  BLE_UART.write("we are live");
+  Serial.begin(9600);  //Default Baud for comm, it may be different for your Module. 
+  Serial.write("we are live");
   
   
   //set up the MPU-6050
-     ACCL.initialize();
-	 Serial.println(ACCL.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+  ACCL.initialize();
+  Serial.println(ACCL.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+  
 
+  
+  
+  
+#ifdef LINE_FOLLOW_TEST
+  // Line Follow Sensor Setup
+  
+  //mySensorBar.setBarStrobe();		// strobe
+  mySensorBar.clearBarStrobe(); 	// more power no strobe
+
+  mySensorBar.clearInvertBits();	// dark line
+  //mySensorBar.setInvertBits(); 	// light line
+
+  // Check I2C for line follow sensor
+  uint8_t returnStatus = mySensorBar.begin();
+  if(returnStatus)
+  {
+    Serial.println("Line follower IC communication OK");
+  }
+  else
+  {
+    Serial.println("Line follower IC communication FAILED");
+    while(1);
+  }
+#endif  
 }
 
 /* ====================================================================================  */
@@ -217,18 +246,35 @@ void setup() {
 		Main Loop
 */
 /* ====================================================================================  */
+
+
+#ifdef TEST_ACCL
+void loop(){
+	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+		Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t"); 
+       Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
+        Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
+		Serial.println();
+		
+		
+		
+		delay(1200);
+}
+#endif
+
+
 #ifdef TEST_BLE_UART_ONLY
 
 int number = 0;
 	void loop(){
-	BLE_UART.println("number: ");
-	BLE_UART.write(number); //purely a number
-	BLE_UART.print("p num: "); //works good for UART serial com, not ascii values (ints)
-	BLE_UART.println(number);
+	Serial.println("number: ");
+	Serial.write(number); //purely a number
+	Serial.print("p num: "); //works good for UART serial com, not ascii values (ints)
+	Serial.println(number);
 	
-	if (BLE_UART.available() > 0) {
+	if (Serial.available() > 0) {
     // read the incoming byte:
-    incomingByte = BLE_UART.read();
+    incomingByte = Serial.read();
 
     // say what you got:
     Serial.print("I received: ");
@@ -267,28 +313,28 @@ int number = 0;
 		*/
 byte byteCountBle =0;
 void loop(){
-	while (BLE_UART.available() > 0) {
+	while (Serial.available() > 0) {
     // read the incoming byte only first one:
 	if(byteCountBle ==0){
-    incomingByte = BLE_UART.read();
+    incomingByte = Serial.read();
 	Serial.print("I received:");
     Serial.print(incomingByte, DEC);
 	// send to ble terminal
-	BLE_UART.print("UART_RX:");
-	BLE_UART.print(incomingByte);
+	Serial.print("UART_RX:");
+	Serial.print(incomingByte);
 	}
 	else{
-	BLE_UART.read(); //don't collect
+	Serial.read(); //don't collect
 	}
 	byteCountBle++;
 	}
-	byteCountBle = 0; // reset for next time we get something.
+		byteCountBle = 0; // reset for next time we get something.
     // say what you got:
    
   
   switch (incomingByte) {
     case ' ': //space stop and reset
-	BLE_UART.println("(space) stop and reset speed");
+	Serial.println("(space) stop and reset speed");
 	incomingByte = 0; // reset, or else infinite loop.
 	encoder_count_right = 0;
 	encoder_count_left = 0;
@@ -300,10 +346,10 @@ void loop(){
       break;
 
     case 'w': 
-	BLE_UART.println("forward");
+	Serial.println("forward");
 	incomingByte = 0; // reset, or else infinite loop.
 	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
-		printBLE_accl_data();
+	printBLE_accl_data();
 	straight(keyboardSpeed,keyboardSpeed,1);
 		}
 	stop();
@@ -314,9 +360,9 @@ void loop(){
 
     case 's': 
 	incomingByte = 0; // reset, or else infinite loop.
-	BLE_UART.println("backward");
+	Serial.println("backward");
 	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
-				printBLE_accl_data();
+	printBLE_accl_data();
 	straight(keyboardSpeed,keyboardSpeed, -1);
 		}
 	stop();
@@ -326,11 +372,11 @@ void loop(){
       break;
   
       case 'a': 
-	BLE_UART.println("90 left turn");
+	Serial.println("90 left turn");
 	incomingByte = 0; // reset, or else infinite loop.
 	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
   	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-			printBLE_accl_data();
+	printBLE_accl_data();
 	}
 	stop();
 	encoder_count_right = 0;
@@ -339,10 +385,10 @@ void loop(){
 	break;
 	
 	case 'd': //f 
-	 BLE_UART.println("90 right turn");
+	 Serial.println("90 right turn");
 	incomingByte = 0; // reset, or else infinite loop.
 	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
-				printBLE_accl_data();
+	printBLE_accl_data();
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
@@ -353,15 +399,15 @@ void loop(){
 	
 	case '+':
 	keyboardSpeed +=10;
-	BLE_UART.print("+ speed: ");
-	BLE_UART.println(keyboardSpeed);
+	Serial.print("+ speed: ");
+	Serial.println(keyboardSpeed);
 	incomingByte = 0; // reset, or else infinite loop.
 	break;		
 	
 	case '-':
 	keyboardSpeed -=10;
-	BLE_UART.print("+ speed: ");
-	BLE_UART.println(keyboardSpeed);
+	Serial.print("+ speed: ");
+	Serial.println(keyboardSpeed);
 	incomingByte = 0; // reset, or else infinite loop.
 	break;		
   
@@ -372,12 +418,12 @@ void loop(){
  }
  
  if(displayFlag == true){
-	BLE_UART.print("Left encoder manual: ");
-	BLE_UART.println(encoder_Left_Manual_reset);
-	BLE_UART.print("Right encoder manual: ");
-	BLE_UART.println(encoder_Right_Manual_reset);
+	Serial.print("Left encoder manual: ");
+	Serial.println(encoder_Left_Manual_reset);
+	Serial.print("Right encoder manual: ");
+	Serial.println(encoder_Right_Manual_reset);
 	
-	//Try ble_uart.print to do numbers in ascii. 
+	//Try Serial.print to do numbers in ascii. 
 
 	 
 	 
@@ -387,10 +433,10 @@ void loop(){
 	Serial.println(encoder_Right_Manual_reset);
 	displayFlag = false;
  }
-   ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("\t a_y "); BLE_UART.print(ay);  BLE_UART.print("\t a_z  "); BLE_UART.println(az);
+ /*  ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  Serial.print("a_x   "); Serial.print(ax);  Serial.print("\t a_y "); Serial.print(ay);  Serial.print("\t a_z  "); Serial.println(az);
 	delay(200);
-
+*/
 
 	}
 #endif
@@ -399,7 +445,7 @@ void loop(){
 */
 void printBLE_accl_data(){
 	 ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  BLE_UART.print("a_x   "); BLE_UART.print(ax);  BLE_UART.print("\t a_y "); BLE_UART.print(ay);  BLE_UART.print("\t a_z  "); BLE_UART.println(az);
+  Serial.print("a_x   "); Serial.print(ax);  Serial.print("\t a_y "); Serial.print(ay);  Serial.print("\t a_z  "); Serial.println(az);
 	delay(200);
 }
 
@@ -415,7 +461,7 @@ void printBLE_accl_data(){
 					encoder_count_left, but instead of being reset automatically, it won't reset after each command, its a debug tool
 			encoder_Right_Manual_reset (DITO ABOVE).
 */
-#ifdef KEYBOARD_INPUT
+#ifdef TEST_KEYBOARD_INPUT
 void loop(){
 	
 	// Collect Keyboard Input
@@ -539,7 +585,6 @@ void loop(){
 
 #ifdef TEST_FINAL
 void loop(){
-	byte speed = 100;			//@Kevin speed different for each motor, no longer needed
 	byte small_delay = 200;
 	byte V_REF_L_VALUE = 52; 	// experimentally tested value (double value works also but more prone to slipping at startup)
 	byte V_REF_R_VALUE = 50;	// experimentally tested value (double value works also but more prone to slipping at startup)
@@ -552,15 +597,7 @@ void loop(){
 	encoder_count_left = 0; 
 	
 	straight(V_REF_L_VALUE, V_REF_R_VALUE);								// straight 3 feet
-	//@Kevin
-	/*
-		Change encoder to right side to avoid motor with catch
-	*/
 	while(encoder_count_right <  ENCODER_R_COUNT_3_FEET_DISTANCE){		// 3 feet encoder check
-	//@Kevin
-	/*
-		during while loop we can test for line following
-	*/
 		int x = encoder_count_right - encoder_count_left;				// calculate difference
 		Serial.print("differences CCW; ");								// print difference
 		Serial.println(x);
@@ -574,7 +611,7 @@ void loop(){
 	
 	Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);	// Rotate CCW
 	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
-    int z = encoder_count_right - encoder_count_left;					
+		int z = encoder_count_right - encoder_count_left;					
 		Serial.print("difference CCW: ");								
 		Serial.println(z);
 		delay(20);
@@ -831,13 +868,6 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction){
 */
 void stop(){
 	//stop
-	// @Kevin 
-	/*
-	This function stops both motors even if both encoders do not reach desired values.
-	Do we want seperate functions to stop each motor seperately so they both reach the desired encoder values,
-	or just modify this function with inputs of Left, Right, Both. Also we could slow one motors voltage to slow how
-	quickly it reaches its encoder value so that they reach them at similar times (a few options are available)
-	*/
 	
 	digitalWrite(CLOCKWISE_R, LOW);
 	digitalWrite(C_CLOCKWISE_R, LOW);
@@ -862,7 +892,6 @@ void stop(){
 	@define: ENCODER_L_COUNT_2_FEET_DISTANCE - used to determine distance via encoder
 */
 void loop(){
-	byte speed = 100;			//@Kevin speed different for each motor
 	byte small_delay = 200;
 	byte V_REF_L_VALUE = 52; 	// experimentally tested value (double value works also but more prone to slipping at startup)
 	byte V_REF_R_VALUE = 50;	// experimentally tested value (double value works also but more prone to slipping at startup)
@@ -922,6 +951,126 @@ void loop(){
 	}
 	stop();
   	delay(10000);  // giving time to flip On Off switch before next loop
+}
+#endif
+
+#ifdef LINE_FOLLOW_TEST
+/*
+	@name: loop
+	@brief: This is the line following code. The robot will:
+		1) Check line sensors to see how many detect line
+		2) Check line sensors and return value from -127 to 127 depending on position of line
+		3) Move forward if line detected and near center
+		4) Rotate clockwise if value is positive and depending on which sensors detect line
+		5) Rotate counter clockwise if value is negative and depending on which sensors detect line
+		6) Stop if zero or more than 3 sensors detect line
+	@input: [hardware] I2C sensor, ON_OFF_SWITCH
+	@output: control the pins for motor movement, check defines above. 
+	@return: none
+*/
+void loop() {
+  delay(25);
+
+  do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
+
+  led_count = mySensorBar.getDensity(); 			// line check
+  bot_position = mySensorBar.getPosition(); 		// check position of line
+  
+  while(led_count < 4 && led_count > 0){
+    
+    if (bot_position > -32 && bot_position < 32){		 // check if line is near center
+      var = 1;
+      break;
+    }
+    else if (bot_position > 46 && bot_position < 64){	 // checks slightly off center (positive)
+      var = 2;
+      break;
+    }
+    else if (bot_position > -64 && bot_position < -46){  // checks slightly off center (negative)
+      var = 3;
+      break;
+    }
+    else if (bot_position > 78 && bot_position < 96){	 // checks off center (positive)
+      var = 4;
+      break;
+    }
+    else if (bot_position > -96 && bot_position < -78){	 // checks off center (negative)
+      var = 5;
+      break;
+    }
+    else if (bot_position > 110 && bot_position <= 127){ // check edge of sensor (positive)
+      var = 6;
+      break;
+    }
+    else if (bot_position >= -127 && bot_position < 110){// checks edge of sensor (negative)
+      var = 7;
+      break;
+    }
+    else {
+      delay(25);
+    }
+  }
+  if(led_count == 0 || led_count >3){	// set default case if no line or more than 3 sensors pick up line
+    var = 0;
+  }
+  delay(25);  
+  
+  switch (var) {
+    case 1:
+      //Straight
+      V_REF_L_VALUE = 50;
+      V_REF_R_VALUE = 50;
+      straight(V_REF_L_VALUE, V_REF_R_VALUE, -1);	// negative is forward
+  	  break;
+    case 2:
+      //Turn right
+  	  V_REF_L_VALUE = 50;   // higher V_REF_L if straight function used
+      V_REF_R_VALUE = 50;
+      stop();
+      // Slower right turn, rotation can use straight function with variable voltages
+      Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+      break;
+    case 3:
+      //Turn left
+  	  V_REF_L_VALUE = 50;
+      V_REF_R_VALUE = 50;   // higher V_REF_R if straight function used
+      stop();
+      Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+      break;
+    case 4:
+      //Turn right more
+  	  V_REF_L_VALUE = 50;
+      V_REF_R_VALUE = 50;
+      stop();
+      Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+      break;
+    case 5:
+      //Turn left more
+      V_REF_L_VALUE = 50;
+      V_REF_R_VALUE = 50;
+      stop();
+      Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+      break;
+    case 6:
+      //Turn right faster
+    	V_REF_L_VALUE = 100;
+      V_REF_R_VALUE = 100;
+      stop();
+      Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+      break;
+    case 7:
+      //Turn left faster
+  	  V_REF_L_VALUE = 100;
+      V_REF_R_VALUE = 100;
+      stop();
+      Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+      break;
+    default:
+      V_REF_L_VALUE = 0;
+      V_REF_R_VALUE = 0;
+      stop();
+  }
+  delay(50);
 }
 #endif
 
