@@ -131,6 +131,7 @@ int incomingByte = 0;   // for incoming serial data
 
 
 //#define TEST_ACCL		// get accl data and send to serial monitor not bluetooth, only for testing
+
 //#define TEST_LAB4_DEMO			//demo for lab 4, read function for details.
 //#define TEST_KEYBOARD_INPUT				//purely for printf debgging. 
 #define TEST_BLE_ACCL_DATA			// print out accelerometer data, tell us moving forward or backward. give data to bluetooth UART
@@ -216,8 +217,8 @@ void setup() {
   
 
   
-  
-  
+ 
+
 #ifdef LINE_FOLLOW_TEST
   // Line Follow Sensor Setup
   
