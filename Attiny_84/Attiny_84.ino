@@ -26,22 +26,68 @@
 
 #include <Wire.h>
 
-#define DEFAULT_ADDRESS_ATTINY84 0X28
 
+#define DEFAULT_ADDRESS_ATTINY84 0X28
+/*
+	PIN MAP FOR ATTINY84
+		** note there is an alternate pinout lots of flexibility!
+	digital pins == Atin84 pin == physical package pins == ANALOG PINS
+	10 = PB0 = 11
+	9 	= PB1	= 12
+	11	= PB3	=	13
+	8 	= PB2	=	14
+	7 	= PA7	=	15	= A7
+	6	= PA6 	=	16	= A6
+	5	= PA5	= 	20	= A5
+	4 	= PA4	= 1	=	A4
+	3	= PA3	= 2	=	A3
+	2	= PA2	= 3	=	A2
+	1	= PA1	= 4	= 	A1
+	0	= PA0	= 5	= 	A0
+		
+
+
+*/
 void setup(){
-	analogWrite(A7, 100); // measure on pcb a duty cycle that is 100/255 
+	for(int i=0; i < 3; i++){
+		pinMode(i, OUTPUT);
+	}
+	
 }
 
 int analogA0 = 0;
 int analogA1 = 0;
 void loop(){
-	analogA0 = analogRead(A0);
-	analogA1 = analogRead(A1);
+	for(int i =0; i< 3; i++){
+	digitalWrite(i, HIGH);
+	}
+	delay(100);
+	for(int i =0; i< 3; i++){
+	digitalWrite(i, LOW);
+	}
+	delay(100);
 	
-	
-	
-	analogWrite(A2, analogA0);
-	analogWrite(A1, analogA1);
-	
-	
+	for(int i=3; i<=7; i+=2){
+		analogWrite(i, 100);
+	}
+	delay(100);
 }	
+
+
+
+void determineNotificationPinState(byte notificationPin, unsigned int measuredDistance){
+	if(measuredDistance > DISTANCE_A){
+		// consider far away don't worry
+		analogWrite(notificationPin, 255);
+	}
+	
+	int count = 0;
+	while(measuredDistance < DISTANCE_F){
+		count++;
+		
+		if(count == 300){
+		analogWrite(notificationPin, 0);
+		break;
+		}
+	}
+}

@@ -28,20 +28,4 @@
 
 #define DEFAULT_ADDRESS_ATTINY84 0X28
 
-void setup(){
-	analogWrite(A7, 100); // measure on pcb a duty cycle that is 100/255 
-}
 
-int analogA0 = 0;
-int analogA1 = 0;
-void loop(){
-	analogA0 = analogRead(A0);
-	analogA1 = analogRead(A1);
-	
-	
-	
-	analogWrite(A2, analogA0);
-	analogWrite(A1, analogA1);
-	
-	
-}	
