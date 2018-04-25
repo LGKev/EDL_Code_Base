@@ -217,8 +217,8 @@ void setup() {
   //mySensorBar.setBarStrobe();		// strobe
   mySensorBar.clearBarStrobe(); 	// more power no strobe
 
-  mySensorBar.clearInvertBits();	// dark line
-  //mySensorBar.setInvertBits(); 	// light line
+  //mySensorBar.clearInvertBits();	// dark line
+  mySensorBar.setInvertBits(); 	// light line
 
   // Check I2C for line follow sensor
   uint8_t returnStatus = mySensorBar.begin();
@@ -293,6 +293,7 @@ int number = 0;
 		a = left turn 90 
 		d = right turn 90
 		s = backward
+    f = line follow
 		
 		r = reset
 		
@@ -398,7 +399,22 @@ void loop(){
 	Serial.print("+ speed: ");
 	Serial.println(keyboardSpeed);
 	incomingByte = 0; // reset, or else infinite loop.
-	break;		
+	break;
+
+  case 'l': //line follow
+  incomingByte = 0; // reset, or else infinite loop.
+  encoder_count_right = 0;
+  encoder_count_left = 0;
+  encoder_Right_Manual_reset = 0;
+  encoder_Left_Manual_reset = 0;
+  keyboardSpeed = 0;
+  Serial.println("Line Following");
+  mode_select = 1;
+  line_follow();
+  stop();
+  displayFlag = true;
+      break;
+     
   
 	default:
 	incomingByte = 0;	
@@ -464,7 +480,7 @@ void loop(){
   }
   
   switch (incomingByte) {
-    case 97: //a
+    case 119: //w
 	incomingByte = 0; // reset, or else infinite loop.
 	straight(keyboardSpeed,keyboardSpeed, -1); //go straight
 	delay(750);
@@ -472,7 +488,7 @@ void loop(){
 	displayFlag = true;
       break;
 
-    case 98: //b
+    case 115: //s
 	incomingByte = 0; // reset, or else infinite loop.
 	straight(keyboardSpeed,keyboardSpeed, 1);
 	delay(750);
@@ -480,7 +496,7 @@ void loop(){
 		displayFlag = true;
       break;
 
-    case 99: //c 
+    case 100: //d 
 	incomingByte = 0; // reset, or else infinite loop.
 	
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
@@ -489,7 +505,7 @@ void loop(){
 		displayFlag = true;
       break;
   
-      case 100: //d 
+      case 97: //a 
 	incomingByte = 0; // reset, or else infinite loop.
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	delay(500);
@@ -498,35 +514,45 @@ void loop(){
 
     break;
 	
-	 case 102: //f 
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
-	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
-	stop();
-		displayFlag = true;
+	case 102: //f 
+	  incomingByte = 0; // reset, or else infinite loop.
+	  encoder_count_left = 0;
+    encoder_count_right = 0;
+
+	  while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
+	    Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	  }
+	  stop();
+	  displayFlag = true;
     break;
 	
 	case 103: //g
 	incomingByte = 0; // reset, or else infinite loop.
+  encoder_count_left = 0;
+  encoder_count_right = 0;
+
 	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
-		displayFlag = true;
-    break;
+  displayFlag = true;
+  break;
 	
 	case 104: //h
 	incomingByte = 0; // reset, or else infinite loop.
+  encoder_count_left = 0;
+  encoder_count_right = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
-	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	  Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
-		displayFlag = true;
-    break;
+  displayFlag = true;
+  break;
 	
-	case 105: //i
+	case 73: //i
 	incomingByte = 0; // reset, or else infinite loop.
+  encoder_count_left = 0;
+  encoder_count_right = 0;
 	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
@@ -534,7 +560,7 @@ void loop(){
 		displayFlag = true;
     break;
 		  
-	case 115: //s
+	case 32: //space
 	incomingByte = 0; // reset, or else infinite loop.
 	delay(750);
 	stop();
@@ -545,6 +571,8 @@ void loop(){
 	incomingByte = 0; // reset, or else infinite loop.
 	encoder_Left_Manual_reset = 0;
 	encoder_Right_Manual_reset = 0;
+  encoder_count_left = 0;
+  encoder_count_right = 0;
 	stop();
 	displayFlag = true;
 	break;
