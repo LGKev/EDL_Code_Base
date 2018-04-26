@@ -242,7 +242,7 @@ void setup() {
 void loop(){
 	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 		Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t"); 
-       Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
+		Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
         Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
 		Serial.println();
 		
@@ -293,7 +293,7 @@ int number = 0;
 		a = left turn 90 
 		d = right turn 90
 		s = backward
-    f = line follow
+		f = line follow
 		
 		r = reset
 		
@@ -331,6 +331,8 @@ void loop(){
 	encoder_Right_Manual_reset = 0;
 	encoder_Left_Manual_reset = 0;
 	keyboardSpeed = 100;
+	keyboardSpeedright = 100;	// added variables to allow seperate Vref for each wheel
+	keyboardSpeedleft = 104;	
 	stop();
 	displayFlag = true;
       break;
@@ -340,7 +342,7 @@ void loop(){
 	incomingByte = 0; // reset, or else infinite loop.
 	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
 	printBLE_accl_data();
-	straight(keyboardSpeed,keyboardSpeed,1);
+	straight(keyboardSpeed,keyboardSpeed, 1);
 		}
 	stop();
 	encoder_count_right = 0;
@@ -482,7 +484,7 @@ void loop(){
   switch (incomingByte) {
     case 119: //w
 	incomingByte = 0; // reset, or else infinite loop.
-	straight(keyboardSpeed,keyboardSpeed, -1); //go straight
+	straight(keyboardSpeed,keyboardSpeed, 1); //go straight
 	delay(750);
 	stop();
 	displayFlag = true;
@@ -490,7 +492,7 @@ void loop(){
 
     case 115: //s
 	incomingByte = 0; // reset, or else infinite loop.
-	straight(keyboardSpeed,keyboardSpeed, 1);
+	straight(keyboardSpeed,keyboardSpeed, -1);
 	delay(750);
 	stop();
 		displayFlag = true;
@@ -810,7 +812,7 @@ void line_follow(){
         //Straight
 		V_REF_L_VALUE = 50;
 		V_REF_R_VALUE = 50;
-		straight(V_REF_L_VALUE, V_REF_R_VALUE, -1);	// negative is forward
+		straight(V_REF_L_VALUE, V_REF_R_VALUE, 1);	// forward
 		break;
 	  case 2:
 		//Turn right
@@ -1095,7 +1097,7 @@ void loop() {
       //Straight
       V_REF_L_VALUE = 50;
       V_REF_R_VALUE = 50;
-      straight(V_REF_L_VALUE, V_REF_R_VALUE, -1);	// negative is forward
+      straight(V_REF_L_VALUE, V_REF_R_VALUE, 1);	// forward
   	  break;
     case 2:
       //Turn right
