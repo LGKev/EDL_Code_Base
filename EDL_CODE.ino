@@ -79,9 +79,12 @@ Copyright (c) 2011 Jeff Rowberg
 #define ENCODER_R_COUNT_2_FEET_DISTANCE			1256	//Experimentally tested, note they are different
 #define ENCODER_L_COUNT_180_TURN		730 //Experimentally tested, note they are different
 #define ENCODER_R_COUNT_180_TURN		750	//Experimentally tested
-
 #define ENCODER_L_COUNT_90_TURN		530// Experimentally found
 #define ENCODER_R_COUNT_90_TURN		520// Experimentally found
+#define ENCODER_L_COUNT_45_TURN		265// Experimentally found
+#define ENCODER_R_COUNT_45_TURN		265// Experimentally found
+#define ENCODER_L_COUNT_22_TURN		132// Experimentally found
+#define ENCODER_R_COUNT_22_TURN		132// Experimentally found
 
 MPU6050 ACCL;
 int16_t ax = 4;
@@ -109,7 +112,10 @@ volatile int encoder_Right_Manual_reset = 0;
 byte V_REF_L_VALUE = 0;
 byte V_REF_R_VALUE = 0;
 
-volatile byte keyboardSpeed = 75; 
+volatile byte keyboardSpeed = 75;
+volatile byte keyboardSpeedright = 100;
+volatile byte keyboardSpeedleft = 105;
+ 
 
 bool demo_4_flag	= false; 	// because I want the robot to rotate around. in infinite loop
 bool displayFlag = true; //used for printout in the KEYBOARD_INPUT test.
@@ -240,15 +246,12 @@ void setup() {
 
 #ifdef TEST_ACCL
 void loop(){
-	    ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-		Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t"); 
-		Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
-        Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
-		Serial.println();
-		
-		
-		
-		delay(1200);
+	ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+	Serial.print("a_x: \t");Serial.print(ax); Serial.print("\t");
+	Serial.print("a_y: \t"); Serial.print(ay); Serial.print("\t");
+	Serial.print("a_z: \t");Serial.print(az); Serial.print("\t");
+	Serial.println();
+	delay(1200);
 }
 #endif
 
@@ -290,10 +293,14 @@ int number = 0;
 		'a'	   's'		'd'
 
 		w = forward
-		a = left turn 90 
-		d = right turn 90
+		a = left turn
+		d = right turn
 		s = backward
-		f = line follow
+		f = left turn 45
+		g = left turn 45
+		h = left turn 90
+		i = left turn 90
+		l = line follow
 		
 		r = reset
 		
@@ -304,141 +311,188 @@ int number = 0;
 byte byteCountBle =0;
 void loop(){
 	while (Serial.available() > 0) {
-    // read the incoming byte only first one:
+	// read the incoming byte only first one:
 	if(byteCountBle ==0){
-    incomingByte = Serial.read();
-	Serial.print("I received:");
-    Serial.print(incomingByte, DEC);
-	// send to ble terminal
-	Serial.print("UART_RX:");
-	Serial.print(incomingByte);
+		incomingByte = Serial.read();
+		Serial.print("I received:");
+		Serial.println(incomingByte, DEC);
+		// send to ble terminal
+		Serial.print("UART_RX:");
+		Serial.println(incomingByte);
 	}
 	else{
-	Serial.read(); //don't collect
+		Serial.read(); //don't collect
 	}
 	byteCountBle++;
 	}
-		byteCountBle = 0; // reset for next time we get something.
+	byteCountBle = 0; // reset for next time we get something.
     // say what you got:
-   
-  
-  switch (incomingByte) {
-    case ' ': //space stop and reset
-	Serial.println("(space) stop and reset speed");
-	incomingByte = 0; // reset, or else infinite loop.
-	encoder_count_right = 0;
-	encoder_count_left = 0;
-	encoder_Right_Manual_reset = 0;
-	encoder_Left_Manual_reset = 0;
-	keyboardSpeed = 100;
-	keyboardSpeedright = 100;	// added variables to allow seperate Vref for each wheel
-	keyboardSpeedleft = 104;	
-	stop();
-	displayFlag = true;
-      break;
-
-    case 'w': 
-	Serial.println("forward");
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
-	printBLE_accl_data();
-	straight(keyboardSpeed,keyboardSpeed, 1);
-		}
-	stop();
-	encoder_count_right = 0;
-	encoder_count_left = 0;
+	
+	switch (incomingByte) {
+		case ' ': //space stop and reset
+		Serial.println("(space) stop and reset speed");
+		incomingByte = 0; // reset, or else infinite loop.
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		encoder_Right_Manual_reset = 0;
+		encoder_Left_Manual_reset = 0;
+		keyboardSpeed = 100;
+		keyboardSpeedright = 100;	// added variables to allow seperate Vref for each wheel
+		keyboardSpeedleft = 104;	
+		stop();
 		displayFlag = true;
-      break;
-
-    case 's': 
-	incomingByte = 0; // reset, or else infinite loop.
-	Serial.println("backward");
-	while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
-	printBLE_accl_data();
-	straight(keyboardSpeed,keyboardSpeed, -1);
+		break;
+		
+		case 'w': 
+		Serial.println("forward");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
+			printBLE_accl_data();
+			straight(keyboardSpeed,keyboardSpeed, 1);
 		}
-	stop();
-	encoder_count_right = 0;
-	encoder_count_left = 0;
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
 		displayFlag = true;
-      break;
-  
-      case 'a': 
-	Serial.println("90 left turn");
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){				// 90 degree encoder check
-  	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	printBLE_accl_data();
-	}
-	stop();
-	encoder_count_right = 0;
-	encoder_count_left = 0;
-	displayFlag = true;
-	break;
-	
-	case 'd': //f 
-	 Serial.println("90 right turn");
-	incomingByte = 0; // reset, or else infinite loop.
-	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
-	printBLE_accl_data();
-	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
-	stop();
-	encoder_count_right = 0;
-	encoder_count_left = 0;
-	displayFlag = true;
-    break;
-	
-	case '+':
-	keyboardSpeed +=10;
-	Serial.print("+ speed: ");
-	Serial.println(keyboardSpeed);
-	incomingByte = 0; // reset, or else infinite loop.
-	break;		
-	
-	case '-':
-	keyboardSpeed -=10;
-	Serial.print("+ speed: ");
-	Serial.println(keyboardSpeed);
-	incomingByte = 0; // reset, or else infinite loop.
-	break;
+		break;
+		
+		case 's': 
+		incomingByte = 0; // reset, or else infinite loop.
+		Serial.println("backward");
+		while(encoder_count_right <  ENCODER_R_COUNT_2_FEET_DISTANCE){
+			printBLE_accl_data();
+			straight(keyboardSpeed,keyboardSpeed, -1);
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
+		
+		case 'a': 
+		Serial.println("22 left turn");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_right <  ENCODER_R_COUNT_22_TURN){
+			printBLE_accl_data();
+			Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
+		
+		case 'd':
+		Serial.println("22 right turn");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_left < ENCODER_R_COUNT_22_TURN){
+			printBLE_accl_data();
+			Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
+		
+		case 'f':
+		Serial.println("45 left turn");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_right <  ENCODER_R_COUNT_45_TURN){
+			Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+			printBLE_accl_data();
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
 
-  case 'l': //line follow
-  incomingByte = 0; // reset, or else infinite loop.
-  encoder_count_right = 0;
-  encoder_count_left = 0;
-  encoder_Right_Manual_reset = 0;
-  encoder_Left_Manual_reset = 0;
-  keyboardSpeed = 0;
-  Serial.println("Line Following");
-  mode_select = 1;
-  line_follow();
-  stop();
-  displayFlag = true;
-      break;
-     
-  
-	default:
-	incomingByte = 0;	
-	break;
+		case 'g':
+		Serial.println("45 right turn");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_left < ENCODER_R_COUNT_45_TURN){
+			printBLE_accl_data();
+			Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
 
- }
+		case 'h':
+		Serial.println("90 left turn");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_right <  ENCODER_R_COUNT_90_TURN){
+			Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+			printBLE_accl_data();
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
+		
+		case 'i':
+		Serial.println("90 right turn");
+		incomingByte = 0; // reset, or else infinite loop.
+		while(encoder_count_left < ENCODER_R_COUNT_90_TURN){
+			printBLE_accl_data();
+			Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+		}
+		stop();
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		displayFlag = true;
+		break;
+		
+		case '+':
+		keyboardSpeed +=10;
+		Serial.print("+ speed: ");
+		Serial.println(keyboardSpeed);
+		incomingByte = 0; // reset, or else infinite loop.
+		break;		
+		
+		case '-':
+		keyboardSpeed -=10;
+		Serial.print("+ speed: ");
+		Serial.println(keyboardSpeed);
+		incomingByte = 0; // reset, or else infinite loop.
+		break;
+		
+		case 'l': //line follow
+		incomingByte = 0; // reset, or else infinite loop.
+		encoder_count_right = 0;
+		encoder_count_left = 0;
+		encoder_Right_Manual_reset = 0;
+		encoder_Left_Manual_reset = 0;
+		keyboardSpeed = 0;
+		Serial.println("Line Following");
+		mode_select = 1;
+		line_follow();
+		stop();
+		displayFlag = true;
+		break;
+		
+		default:
+		incomingByte = 0;	
+		break;
+	}
  
- if(displayFlag == true){
-	Serial.print("Left encoder manual: ");
-	Serial.println(encoder_Left_Manual_reset);
-	Serial.print("Right encoder manual: ");
-	Serial.println(encoder_Right_Manual_reset);
+	if(displayFlag == true){
+		Serial.print("Left encoder manual: ");
+		Serial.println(encoder_Left_Manual_reset);
+		Serial.print("Right encoder manual: ");
+		Serial.println(encoder_Right_Manual_reset);
 	
 	//Try Serial.print to do numbers in ascii. 
 
-	 
-	 
-    Serial.print("Left encoder manual: ");
-	Serial.print(encoder_Left_Manual_reset);
-	Serial.print("     Right encoder manual:  ");
-	Serial.println(encoder_Right_Manual_reset);
-	displayFlag = false;
+		Serial.print("Left encoder manual: ");
+		Serial.println(encoder_Left_Manual_reset);
+		Serial.print("Right encoder manual:  ");
+		Serial.println(encoder_Right_Manual_reset);
+		displayFlag = false;
  }
  /*  ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
   Serial.print("a_x   "); Serial.print(ax);  Serial.print("\t a_y "); Serial.print(ay);  Serial.print("\t a_z  "); Serial.println(az);
@@ -451,8 +505,8 @@ void loop(){
 	Prints accel data to uart. 
 */
 void printBLE_accl_data(){
-	 ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  Serial.print("a_x   "); Serial.print(ax);  Serial.print("\t a_y "); Serial.print(ay);  Serial.print("\t a_z  "); Serial.println(az);
+	ACCL.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+	Serial.print("a_x   "); Serial.print(ax);  Serial.print("\t a_y "); Serial.print(ay);  Serial.print("\t a_z  "); Serial.println(az);
 	delay(200);
 }
 
@@ -474,107 +528,97 @@ void loop(){
 	// Collect Keyboard Input
 	if (Serial.available() > 0) {
     // read the incoming byte:
-    incomingByte = Serial.read();
+		incomingByte = Serial.read();
 
     // say what you got:
-    Serial.print("I received: ");
-    Serial.println(incomingByte, DEC);
-  }
-  
-  switch (incomingByte) {
-    case 119: //w
+		Serial.print("I received: ");
+		Serial.println(incomingByte, DEC);
+	}
+	
+	switch (incomingByte) {
+	case 119: //w
 	incomingByte = 0; // reset, or else infinite loop.
 	straight(keyboardSpeed,keyboardSpeed, 1); //go straight
-	delay(750);
+	delay(400);
 	stop();
 	displayFlag = true;
-      break;
-
-    case 115: //s
+	break;
+	
+	case 115: //s
 	incomingByte = 0; // reset, or else infinite loop.
 	straight(keyboardSpeed,keyboardSpeed, -1);
-	delay(750);
+	delay(400);
 	stop();
-		displayFlag = true;
-      break;
-
-    case 100: //d 
-	incomingByte = 0; // reset, or else infinite loop.
+	displayFlag = true;
+	break;
 	
-	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	delay(500);
-	stop();
-		displayFlag = true;
-      break;
-  
-      case 97: //a 
+	case 97: //a 
 	incomingByte = 0; // reset, or else infinite loop.
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	delay(500);
+	delay(250);
 	stop();
-		displayFlag = true;
-
-    break;
+	displayFlag = true;
+	break;
+	
+	case 100: //d 
+	incomingByte = 0; // reset, or else infinite loop.
+	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(250);
+	stop();
+	displayFlag = true;
+	break;
 	
 	case 102: //f 
-	  incomingByte = 0; // reset, or else infinite loop.
-	  encoder_count_left = 0;
-    encoder_count_right = 0;
-
-	  while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
-	    Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
-	  }
-	  stop();
-	  displayFlag = true;
-    break;
+	incomingByte = 0; // reset, or else infinite loop.
+	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
+	delay(450);
+	stop();
+	displayFlag = true;
+	break;
 	
 	case 103: //g
 	incomingByte = 0; // reset, or else infinite loop.
-  encoder_count_left = 0;
-  encoder_count_right = 0;
-
-	while(encoder_count_left < ENCODER_L_COUNT_90_TURN){
 	Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
+	delay(450);
 	stop();
-  displayFlag = true;
-  break;
+	displayFlag = true;
+	break;
 	
 	case 104: //h
 	incomingByte = 0; // reset, or else infinite loop.
-  encoder_count_left = 0;
-  encoder_count_right = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
-	  Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
-	}
-	stop();
-  displayFlag = true;
-  break;
-	
-	case 73: //i
-	incomingByte = 0; // reset, or else infinite loop.
-  encoder_count_left = 0;
-  encoder_count_right = 0;
-	while(encoder_count_left < ENCODER_L_COUNT_180_TURN){
+	encoder_count_left = 0;
+	encoder_count_right = 0;
+	while(encoder_count_left < ENCODER_R_COUNT_90_TURN){
 	Rotate_Robot_Counter_ClockWise360(keyboardSpeed,keyboardSpeed);
 	}
 	stop();
-		displayFlag = true;
-    break;
-		  
-	case 32: //space
+	displayFlag = true;
+	break;
+	
+	case 105: //i
 	incomingByte = 0; // reset, or else infinite loop.
-	delay(750);
+	encoder_count_left = 0;
+	encoder_count_right = 0;
+	while(encoder_count_left < ENCODER_R_COUNT_90_TURN){
+	  Rotate_Robot_ClockWise360(keyboardSpeed,keyboardSpeed);
+	}
 	stop();
 	displayFlag = true;
-    break;
+	break;
+	
+	case 32: //space
+	incomingByte = 0; // reset, or else infinite loop.
+	delay(500);
+	stop();
+	displayFlag = true;
+	break;
 	  
 	case 114: //r
 	incomingByte = 0; // reset, or else infinite loop.
 	encoder_Left_Manual_reset = 0;
 	encoder_Right_Manual_reset = 0;
-  encoder_count_left = 0;
-  encoder_count_right = 0;
+	encoder_count_left = 0;
+	encoder_count_right = 0;
 	stop();
 	displayFlag = true;
 	break;
@@ -596,12 +640,12 @@ void loop(){
  }
  
  if(displayFlag == true){
-    Serial.print("Left encoder manual: ");
-	Serial.print(encoder_Left_Manual_reset);
-	Serial.print("     Right encoder manual:  ");
+	Serial.print("Left encoder manual: ");
+	Serial.println(encoder_Left_Manual_reset);
+	Serial.print("Right encoder manual:  ");
 	Serial.println(encoder_Right_Manual_reset);
 	delay(500);
-		displayFlag = false;
+	displayFlag = false;
  }
   
 }
@@ -655,8 +699,8 @@ void count_Right(){
 */
 void Rotate_Robot_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
-	digitalWrite(CLOCKWISE_R, HIGH);
-	digitalWrite(C_CLOCKWISE_R, LOW);
+	digitalWrite(CLOCKWISE_R, LOW);
+	digitalWrite(C_CLOCKWISE_R, HIGH);
 	
 	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_L, LOW);
@@ -673,8 +717,8 @@ void Rotate_Robot_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 */
 void Rotate_Robot_Counter_ClockWise360( byte V_REF_L_VALUE, byte V_REF_R_VALUE){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
-	digitalWrite(CLOCKWISE_R, LOW);
-	digitalWrite(C_CLOCKWISE_R, HIGH);
+	digitalWrite(CLOCKWISE_R, HIGH);
+	digitalWrite(C_CLOCKWISE_R, LOW);
 	
 	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
 	digitalWrite(CLOCKWISE_L, HIGH);
@@ -700,8 +744,8 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction){
 	digitalWrite(C_CLOCKWISE_R, LOW);
 	
 	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
-	digitalWrite(CLOCKWISE_L, HIGH);
-	digitalWrite(C_CLOCKWISE_L, LOW);
+	digitalWrite(CLOCKWISE_L, LOW);
+	digitalWrite(C_CLOCKWISE_L, HIGH);
 	}
 	else if(direction == -1){
 	analogWrite(V_REF_R, V_REF_R_VALUE); // FORCE one direction for right wheel
@@ -709,8 +753,8 @@ void straight(byte V_REF_L_VALUE, byte V_REF_R_VALUE, int direction){
 	digitalWrite(C_CLOCKWISE_R, HIGH);
 	
 	analogWrite(V_REF_L, V_REF_L_VALUE); // FORCE one direction for right wheel
-	digitalWrite(CLOCKWISE_L, LOW);
-	digitalWrite(C_CLOCKWISE_L, HIGH);
+	digitalWrite(CLOCKWISE_L, HIGH);
+	digitalWrite(C_CLOCKWISE_L, LOW);
 	}
 	//should never reach here
 }	
@@ -747,119 +791,118 @@ void stop(){
 */
 
 void line_follow(){
-  delay(25);
+	delay(25);
+	
+	if (digitalRead(ON_OFF_SWITCH) == LOW){ // Check for On/Off switch
+		stop();
+		mode_select = 0;
+		Serial.println("ON_OFF_SWITCH set to low");
+		return;
+	}
 
-  if (digitalRead(ON_OFF_SWITCH) == LOW){ // Check for On/Off switch
-	stop();
-	mode_select = 0;
-	Serial.println("ON_OFF_SWITCH set to low");
-	return;
-  }
-
-  while((mode_select == 1) && (digitalRead(ON_OFF_SWITCH) == HIGH)){
-    
-  led_count = mySensorBar.getDensity(); 			  // initial line check
+	while((mode_select == 1) && (digitalRead(ON_OFF_SWITCH) == HIGH)){
+	led_count = mySensorBar.getDensity();			// initial line check
 	bot_position = mySensorBar.getPosition(); 		// initial position of line check
   
 	while(led_count < 4 && led_count > 0){
-	  led_count = mySensorBar.getDensity(); 			// line check
-	  bot_position = mySensorBar.getPosition(); 		// check position of line
+		led_count = mySensorBar.getDensity(); 			// line check
+		bot_position = mySensorBar.getPosition(); 		// check position of line
 		
-	  if (bot_position > -32 && bot_position < 32){		 // check if line is near center
-		var = 1;
-		break;
-	  }
-	  else if (bot_position > 46 && bot_position < 64){	 // checks slightly off center (positive)
-		var = 2;
-		break;
-	  }
-	  else if (bot_position > -64 && bot_position < -46){  // checks slightly off center (negative)
-		var = 3;
-		break;
-	  }
-	  else if (bot_position > 78 && bot_position < 96){	 // checks off center (positive)
-		var = 4;
-		break;
-	  }
-	  else if (bot_position > -96 && bot_position < -78){	 // checks off center (negative)
-		var = 5;
-		break;
-	  }
-	  else if (bot_position > 110 && bot_position <= 127){ // check edge of sensor (positive)
-		var = 6;
-		break;
-	  }
-	  else if (bot_position >= -127 && bot_position < 110){// checks edge of sensor (negative)
-		var = 7;
-		break;
-	  }
-	  else {
-		delay(25);
-	  }
+		if (bot_position > -32 && bot_position < 32){		 // check if line is near center
+			var = 1;
+			break;
+		}
+		else if (bot_position > 46 && bot_position < 64){	 // checks slightly off center (positive)
+			var = 2;
+			break;
+		}
+		else if (bot_position > -64 && bot_position < -46){  // checks slightly off center (negative)
+			var = 3;
+			break;
+		}
+		else if (bot_position > 78 && bot_position < 96){	 // checks off center (positive)
+			var = 4;
+			break;
+		}
+		else if (bot_position > -96 && bot_position < -78){	 // checks off center (negative)
+			var = 5;
+			break;
+		}
+		else if (bot_position > 110 && bot_position <= 127){ // check edge of sensor (positive)
+			var = 6;
+			break;
+		}
+		else if (bot_position >= -127 && bot_position < 110){// checks edge of sensor (negative)
+			var = 7;
+			break;
+		}
+		else {
+			delay(25);
+		}
 	}
 	if(led_count == 0 || led_count > 3){	// set default case if no line or more than 3 sensors pick up line
-	  mode_select = 0;
-	  var = 0;
-    stop();
-	  Serial.println("lost line detection");
-	  return;	  
+		mode_select = 0;
+		var = 0;
+		stop();
+		Serial.println("lost line detection");
+		return;	  
 	}
 	
     delay(25);  
   
     switch (var) {
-	  case 1:
-        //Straight
-		V_REF_L_VALUE = 50;
-		V_REF_R_VALUE = 50;
-		straight(V_REF_L_VALUE, V_REF_R_VALUE, 1);	// forward
-		break;
-	  case 2:
+		case 1:
+		//Straight
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;
+			straight(V_REF_L_VALUE, V_REF_R_VALUE, 1);	// forward
+			break;
+		case 2:
 		//Turn right
-		V_REF_L_VALUE = 25;   // higher V_REF_L if straight function used
-		V_REF_R_VALUE = 25;
+			V_REF_L_VALUE = 25;   // higher V_REF_L if straight function used
+			V_REF_R_VALUE = 25;
 		// Slower right turn, rotation can use straight function with variable voltages
-		Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-		break;
-	  case 3:
+			Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 3:
 		//Turn left
-		V_REF_L_VALUE = 25;
-		V_REF_R_VALUE = 25;   // higher V_REF_R if straight function used
-		Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-		break;
-      case 4:
+			V_REF_L_VALUE = 25;
+			V_REF_R_VALUE = 25;   // higher V_REF_R if straight function used
+			Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 4:
 		//Turn right more
-		V_REF_L_VALUE = 50;
-		V_REF_R_VALUE = 50;
-		Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-		break;
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;
+			Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
       case 5:
 		//Turn left more
-		V_REF_L_VALUE = 50;
-		V_REF_R_VALUE = 50;
-		Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-		break;
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;
+			Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
       case 6:
 		//Turn right faster
-		V_REF_L_VALUE = 75;
-		V_REF_R_VALUE = 75;
-		Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-		break;
+			V_REF_L_VALUE = 75;
+			V_REF_R_VALUE = 75;
+			Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
       case 7:
 		//Turn left faster
-		V_REF_L_VALUE = 75;
-		V_REF_R_VALUE = 75;
-		Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-		break;
+			V_REF_L_VALUE = 75;
+			V_REF_R_VALUE = 75;
+			Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
       default:
-		V_REF_L_VALUE = 0;
-		V_REF_R_VALUE = 0;
-		stop();
-	}
+			V_REF_L_VALUE = 0;
+			V_REF_R_VALUE = 0;
+			stop();
+		}
 	delay(50);
-  }
-  mode_select = 0;
-  Serial.println("Done Following");
+	}
+	mode_select = 0;
+	Serial.println("Done Following");
 }
 
 #ifdef TEST_STRAIGHT
@@ -894,8 +937,8 @@ void loop(){
 	@return: none
 */
 void loop() {
-  // TODO: define which direction this set up is: ________________
-  	analogWrite(V_REF_R, 229); //set full speed, 90 % duty cycle
+	// TODO: define which direction this set up is: ________________
+	analogWrite(V_REF_R, 229); //set full speed, 90 % duty cycle
 	analogWrite(V_REF_L, 229);
 	digitalWrite(CLOCKWISE_R, HIGH);
 	digitalWrite(C_CLOCKWISE_R, LOW);
@@ -905,7 +948,7 @@ void loop() {
 	digitalWrite(CLOCKWISE_R, LOW);
 	digitalWrite(C_CLOCKWISE_R, LOW);
 	delay(2000);
- // go the other direction  TODO: define which direction this set up is: ________________
+	// go the other direction  TODO: define which direction this set up is: ________________
 	digitalWrite(CLOCKWISE_R, LOW);
 	digitalWrite(C_CLOCKWISE_R, HIGH);
 	delay(2000);
@@ -918,8 +961,8 @@ void loop() {
 
 #ifdef TEST_MANUAL_CHANGE_DIRECTIONS_LEFT
 void loop() {
-  // TODO: define which direction this set up is: ________________
-  	analogWrite(V_REF_R, 229); //set full speed, 90 % duty cycle
+	// TODO: define which direction this set up is: ________________
+	analogWrite(V_REF_R, 229); //set full speed, 90 % duty cycle
 	analogWrite(V_REF_L, 229);
 	digitalWrite(CLOCKWISE_L, HIGH);
 	digitalWrite(C_CLOCKWISE_L, LOW);
@@ -929,7 +972,7 @@ void loop() {
 	digitalWrite(CLOCKWISE_L, LOW);
 	digitalWrite(C_CLOCKWISE_L, LOW);
 	delay(2000);
- // go the other direction  TODO: define which direction this set up is: ________________
+	// go the other direction  TODO: define which direction this set up is: ________________
 	digitalWrite(CLOCKWISE_L, LOW);
 	digitalWrite(C_CLOCKWISE_L, HIGH);
 	delay(2000);
@@ -982,15 +1025,14 @@ void loop() {
 	@return: none
 */
 void loop(){
-	
 	if(flag == 1){
 		straight(50,50,1); //make it go
 		encoder_count_left = 0; //reset the count
 		flag = 0;
 	}
-  Serial.print("left count: ");
-  Serial.println(encoder_count_left);
-		delay(300);
+	Serial.print("left count: ");
+	Serial.println(encoder_count_left);
+	delay(300);
 
 }
 #endif
@@ -1010,9 +1052,9 @@ void loop(){
 		encoder_count_right = 0; //reset the count
 		flag = 0;
 	}
-  Serial.print("right count: ");
-  Serial.println(encoder_count_right);
-		delay(300);
+	Serial.print("right count: ");
+	Serial.println(encoder_count_right);
+	delay(300);
 
 }
 #endif
@@ -1046,108 +1088,107 @@ void loop(){
 	@return: none
 */
 void loop() {
-  delay(25);
-
-  do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
-
-  led_count = mySensorBar.getDensity(); 			// line check
-  bot_position = mySensorBar.getPosition(); 		// check position of line
-  
-  while(led_count < 4 && led_count > 0){
+	delay(25);
+	
+	do {} while (digitalRead(ON_OFF_SWITCH) == LOW);  // wait for ON switch
+	led_count = mySensorBar.getDensity(); 			// line check
+	bot_position = mySensorBar.getPosition(); 		// check position of line
+	
+	while(led_count < 4 && led_count > 0){
     
-    if (bot_position > -32 && bot_position < 32){		 // check if line is near center
-      var = 1;
-      break;
-    }
-    else if (bot_position > 46 && bot_position < 64){	 // checks slightly off center (positive)
-      var = 2;
-      break;
-    }
-    else if (bot_position > -64 && bot_position < -46){  // checks slightly off center (negative)
-      var = 3;
-      break;
-    }
-    else if (bot_position > 78 && bot_position < 96){	 // checks off center (positive)
-      var = 4;
-      break;
-    }
-    else if (bot_position > -96 && bot_position < -78){	 // checks off center (negative)
-      var = 5;
-      break;
-    }
-    else if (bot_position > 110 && bot_position <= 127){ // check edge of sensor (positive)
-      var = 6;
-      break;
-    }
-    else if (bot_position >= -127 && bot_position < 110){// checks edge of sensor (negative)
-      var = 7;
-      break;
-    }
-    else {
-      delay(25);
-    }
-  }
-  if(led_count == 0 || led_count > 3){	// set default case if no line or more than 3 sensors pick up line
-    var = 0;
-  }
-  delay(25);  
-  
-  switch (var) {
-    case 1:
-      //Straight
-      V_REF_L_VALUE = 50;
-      V_REF_R_VALUE = 50;
-      straight(V_REF_L_VALUE, V_REF_R_VALUE, 1);	// forward
-  	  break;
-    case 2:
-      //Turn right
-  	  V_REF_L_VALUE = 50;   // higher V_REF_L if straight function used
-      V_REF_R_VALUE = 50;
-      stop();
-      // Slower right turn, rotation can use straight function with variable voltages
-      Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-      break;
-    case 3:
-      //Turn left
-  	  V_REF_L_VALUE = 50;
-      V_REF_R_VALUE = 50;   // higher V_REF_R if straight function used
-      stop();
-      Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-      break;
-    case 4:
-      //Turn right more
-  	  V_REF_L_VALUE = 50;
-      V_REF_R_VALUE = 50;
-      stop();
-      Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-      break;
-    case 5:
-      //Turn left more
-      V_REF_L_VALUE = 50;
-      V_REF_R_VALUE = 50;
-      stop();
-      Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-      break;
-    case 6:
-      //Turn right faster
-    	V_REF_L_VALUE = 100;
-      V_REF_R_VALUE = 100;
-      stop();
-      Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-      break;
-    case 7:
-      //Turn left faster
-  	  V_REF_L_VALUE = 100;
-      V_REF_R_VALUE = 100;
-      stop();
-      Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
-      break;
-    default:
-      V_REF_L_VALUE = 0;
-      V_REF_R_VALUE = 0;
-      stop();
-  }
-  delay(50);
+		if (bot_position > -32 && bot_position < 32){		 // check if line is near center
+		var = 1;
+		break;
+		}
+		else if (bot_position > 46 && bot_position < 64){	 // checks slightly off center (positive)
+		var = 2;
+		break;
+		}
+		else if (bot_position > -64 && bot_position < -46){  // checks slightly off center (negative)
+		var = 3;
+		break;
+		}
+		else if (bot_position > 78 && bot_position < 96){	 // checks off center (positive)
+		var = 4;
+		break;
+		}
+		else if (bot_position > -96 && bot_position < -78){	 // checks off center (negative)
+		var = 5;
+		break;
+		}
+		else if (bot_position > 110 && bot_position <= 127){ // check edge of sensor (positive)
+		var = 6;
+		break;
+		}
+		else if (bot_position >= -127 && bot_position < 110){// checks edge of sensor (negative)
+		var = 7;
+		break;
+		}
+		else {
+		delay(25);
+		}
+	}
+	if(led_count == 0 || led_count > 3){	// set default case if no line or more than 3 sensors pick up line
+		var = 0;
+	}
+	delay(25);
+	
+	switch (var) {
+		case 1:
+			//Straight
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;
+			straight(V_REF_L_VALUE, V_REF_R_VALUE, 1);	// forward
+			break;
+			case 2:
+			//Turn right
+			V_REF_L_VALUE = 50;   // higher V_REF_L if straight function used
+			V_REF_R_VALUE = 50;
+			stop();
+			// Slower right turn, rotation can use straight function with variable voltages
+			Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 3:
+			//Turn left
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;   // higher V_REF_R if straight function used
+			stop();
+			Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 4:
+			//Turn right more
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;
+			stop();
+			Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 5:
+			//Turn left more
+			V_REF_L_VALUE = 50;
+			V_REF_R_VALUE = 50;
+			stop();
+			Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 6:
+			//Turn right faster
+			V_REF_L_VALUE = 100;
+			V_REF_R_VALUE = 100;
+			stop();
+			Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		case 7:
+			//Turn left faster
+			V_REF_L_VALUE = 100;
+			V_REF_R_VALUE = 100;
+			stop();
+			Rotate_Robot_Counter_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);
+			break;
+		default:
+			V_REF_L_VALUE = 0;
+			V_REF_R_VALUE = 0;
+			stop();
+	}
+	delay(50);
 }
 #endif
 
@@ -1187,8 +1228,8 @@ void loop(){
 	}
 	stop();
 	delay(small_delay);
-
-    encoder_count_right = 0;	//reset the counts
+	
+	encoder_count_right = 0;	//reset the counts
 	encoder_count_left = 0;
 	
 	Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);			// rotate CW
@@ -1225,7 +1266,7 @@ void loop(){
 		delay(20);
 	}
 	stop();
-  	delay(10000);  // giving time to flip On Off switch before next loop
+	delay(10000);  // giving time to flip On Off switch before next loop
 }
 #endif
 
@@ -1329,8 +1370,8 @@ void loop(){
 	}
 	stop();
 	delay(small_delay);
-
-    encoder_count_right = 0;	//reset the counts
+	
+	encoder_count_right = 0;	//reset the counts
 	encoder_count_left = 0;
 	
 	Rotate_Robot_ClockWise360(V_REF_L_VALUE, V_REF_R_VALUE);			// rotate CW
@@ -1393,6 +1434,6 @@ void loop(){
 		delay(20);
 	}
 	stop();
-  	delay(10000);  // giving time to flip On Off switch before next loop
+	delay(10000);  // giving time to flip On Off switch before next loop
 }
 #endif 
